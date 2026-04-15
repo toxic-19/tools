@@ -22,6 +22,7 @@ const jsonTreeView = document.getElementById('json-tree-view');
 const btnFormat   = document.getElementById('btn-format');
 const btnCompact  = document.getElementById('btn-compact');
 const btnRepair   = document.getElementById('btn-repair');
+const btnEscape   = document.getElementById('btn-escape');
 const btnUnescape = document.getElementById('btn-unescape');
 const btnCopy     = document.getElementById('btn-copy');
 const btnClear    = document.getElementById('btn-clear');
@@ -192,6 +193,30 @@ btnRepair.addEventListener('click', () => {
   }
   updateLineNumbers();
   updateInfo();
+});
+
+/* ── Escape (JSON.stringify) ─────────────────────────────────── */
+btnEscape.addEventListener('click', () => {
+  const val = jsonInput.value.trim();
+  if (!val) return;
+  try {
+    // Attempt parsing first to ensure it's valid JSON
+    let parsed = JSON.parse(val);
+    // Double stringify creates the escaped string version
+    jsonInput.value = JSON.stringify(JSON.stringify(parsed));
+    flashSuccess();
+    resetScroll();
+    refreshTreeViewIfNeeded();
+  } catch (e) {
+    // If not JSON, just stringify the raw text to escape it
+    jsonInput.value = JSON.stringify(val);
+    flashSuccess();
+    resetScroll();
+    refreshTreeViewIfNeeded();
+  }
+  updateLineNumbers();
+  updateInfo();
+  validateLive();
 });
 
 /* ── Unescape ──────────────────────────────────────────────── */
