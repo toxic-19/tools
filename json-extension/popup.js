@@ -47,6 +47,7 @@ tabs.forEach(tab => {
     contents.forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('content-' + tab.dataset.tab).classList.add('active');
+    resetScroll();
   });
 });
 
@@ -332,7 +333,8 @@ btnCompare.addEventListener('click', () => {
   diffStats.textContent = `新增 ${stats.added} · 删除 ${stats.removed} · 修改 ${stats.changed}`;
   diffResult.classList.remove('hidden');
 
-  // sync scroll
+  // Reset scroll and sync scroll
+  resetScroll(); 
   syncScroll(diffPanelL, diffPanelR);
 });
 
@@ -469,11 +471,26 @@ if (btnTheme) {
 }
 
 function resetScroll() {
-  jsonInput.scrollLeft = 0;
-  jsonInput.scrollTop = 0;
+  const inputs = [jsonInput, diffLeft, diffRight];
+  inputs.forEach(el => {
+    if (el) {
+      el.scrollLeft = 0;
+      el.scrollTop = 0;
+    }
+  });
+
   if (lineNums) lineNums.scrollTop = 0;
+  
+  const panels = [jsonTreeView, diffPanelL, diffPanelR];
+  panels.forEach(el => {
+    if (el) {
+      el.scrollTop = 0;
+      el.scrollLeft = 0;
+    }
+  });
 }
 
+resetScroll();
 initTheme();
 
 /* ── View Toggle & Tree Rendering ──────────────────────── */
@@ -485,7 +502,9 @@ viewToggles.forEach(btn => {
     viewToggles.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     
+    
     currentViewMode = btn.dataset.mode;
+    resetScroll();
     if (currentViewMode === 'tree') {
       jsonInput.style.display = 'none';
       lineNums.style.display = 'none';

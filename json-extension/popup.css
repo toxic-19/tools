@@ -66,12 +66,12 @@ html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
 
 body {
   width: 720px;
-  min-height: 540px;
+  height: 600px;
   font-family: 'Inter', system-ui, sans-serif;
   background: var(--bg-base);
   color: var(--text-primary);
   font-size: 13px;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .app {
@@ -268,7 +268,13 @@ body {
 .btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border); }
 
 /* ── Tab Content ─────────────────────────────── */
-.tab-content { display: none; flex-direction: column; flex: 1; }
+.tab-content { 
+  display: none; 
+  flex-direction: column; 
+  flex: 1; 
+  min-height: 0; 
+  overflow: hidden;
+}
 .tab-content.active { display: flex; }
 
 /* ── Editor ──────────────────────────────────── */
@@ -277,6 +283,7 @@ body {
   flex-direction: column;
   flex: 1;
   padding: 12px 14px 4px;
+  min-height: 0;
 }
 
 .editor-header {
@@ -309,7 +316,7 @@ body {
 
 .editor-container {
   display: flex;
-  flex: 1;
+  height: 380px; /* 使编辑器区域高度固定，防止撑开 body 导致双滚动条 */
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -350,7 +357,7 @@ body {
   line-height: 1.6;
   resize: none;
   width: 100%;
-  min-height: 280px;
+  height: 100%;
   white-space: pre;
   overflow-wrap: normal;
   overflow-x: auto;
@@ -410,7 +417,7 @@ body {
 }
 
 .diff-editor {
-  min-height: 160px;
+  height: 160px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--bg-input);
@@ -473,7 +480,8 @@ body {
 
 .diff-panels {
   display: flex;
-  max-height: 280px;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
