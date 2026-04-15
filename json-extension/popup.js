@@ -22,6 +22,7 @@ const jsonTreeView = document.getElementById('json-tree-view');
 const btnFormat   = document.getElementById('btn-format');
 const btnCompact  = document.getElementById('btn-compact');
 const btnRepair   = document.getElementById('btn-repair');
+const btnUnescape = document.getElementById('btn-unescape');
 const btnCopy     = document.getElementById('btn-copy');
 const btnClear    = document.getElementById('btn-clear');
 
@@ -188,6 +189,29 @@ btnRepair.addEventListener('click', () => {
   }
   updateLineNumbers();
   updateInfo();
+});
+
+/* ── Unescape ──────────────────────────────────────────────── */
+btnUnescape.addEventListener('click', () => {
+  const val = jsonInput.value.trim();
+  if (!val) return;
+  try {
+    // Attempt to parse once to unescape the string
+    let unescaped = JSON.parse(val);
+    if (typeof unescaped === 'string') {
+      jsonInput.value = unescaped;
+      flashSuccess();
+      refreshTreeViewIfNeeded();
+    } else {
+      setStatus('✓ 已经是 JSON', 'success');
+    }
+  } catch (e) {
+    setStatus('✗ 反转义失败', 'error');
+    showError('输入不是有效的转义字符串: ' + e.message);
+  }
+  updateLineNumbers();
+  updateInfo();
+  validateLive();
 });
 
 /* ── Copy ──────────────────────────────────────────────────── */
