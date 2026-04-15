@@ -3,35 +3,6 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-base:       #0f1117;
-  --bg-surface:    #1a1d27;
-  --bg-elevated:   #22263a;
-  --bg-input:      #12141e;
-  --border:        #2e3250;
-  --border-focus:  #5c6ef8;
-  --text-primary:  #e8eaf6;
-  --text-secondary:#8b92b8;
-  --text-muted:    #565e85;
-  --accent:        #5c6ef8;
-  --accent-hover:  #7080ff;
-  --warning:       #f5a623;
-  --warning-hover: #ffba45;
-  --success:       #4caf95;
-  --error:         #f06060;
-  --added:         #1e4a35;
-  --added-text:    #4cda8a;
-  --removed:       #4a1e1e;
-  --removed-text:  #f06060;
-  --changed:       #3a3011;
-  --changed-text:  #f5c842;
-  --radius-sm:     6px;
-  --radius-md:     10px;
-  --radius-lg:     14px;
-  --shadow:        0 4px 24px rgba(0,0,0,0.5);
-}
-
-/* ── Light Theme ─────────────────────────────── */
-html[data-theme="light"] {
   --bg-base:       #f0f2f8;
   --bg-surface:    #ffffff;
   --bg-elevated:   #e4e8f4;
@@ -53,7 +24,36 @@ html[data-theme="light"] {
   --removed-text:  #b82020;
   --changed:       #fef3cc;
   --changed-text:  #7a5500;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     14px;
   --shadow:        0 4px 24px rgba(0,0,0,0.12);
+}
+
+/* ── Dark Theme ──────────────────────────────── */
+html[data-theme="dark"] {
+  --bg-base:       #0f1117;
+  --bg-surface:    #1a1d27;
+  --bg-elevated:   #22263a;
+  --bg-input:      #12141e;
+  --border:        #2e3250;
+  --border-focus:  #5c6ef8;
+  --text-primary:  #e8eaf6;
+  --text-secondary:#8b92b8;
+  --text-muted:    #565e85;
+  --accent:        #5c6ef8;
+  --accent-hover:  #7080ff;
+  --warning:       #f5a623;
+  --warning-hover: #ffba45;
+  --success:       #4caf95;
+  --error:         #f06060;
+  --added:         #1e4a35;
+  --added-text:    #4cda8a;
+  --removed:       #4a1e1e;
+  --removed-text:  #f06060;
+  --changed:       #3a3011;
+  --changed-text:  #f5c842;
+  --shadow:        0 4px 24px rgba(0,0,0,0.5);
 }
 
 html[data-theme="light"] .btn-secondary:hover {
@@ -508,7 +508,11 @@ body {
 /* Scrollbars */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb { 
+  background: var(--border); 
+  border-radius: 3px; 
+  cursor: pointer;
+}
 ::-webkit-scrollbar-thumb:hover { background: #404878; }
 
 /* ── Tree Viewer & View Toggles ──────────────── */

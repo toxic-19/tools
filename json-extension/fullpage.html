@@ -28,19 +28,19 @@
     <!-- ══ Formatter Tab ══════════════════════════════════════ -->
     <div class="tab-content active" id="content-formatter">
       <div class="toolbar">
-        <button class="btn btn-primary" id="btn-format">
+        <button class="btn btn-primary" id="btn-format" title="美化并缩进 JSON 代码">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
           Format
         </button>
-        <button class="btn btn-secondary" id="btn-compact">
+        <button class="btn btn-secondary" id="btn-compact" title="压缩 JSON，去除所有空格和换行">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
           Compact
         </button>
-        <button class="btn btn-warning" id="btn-repair">
+        <button class="btn btn-warning" id="btn-repair" title="自动修复非标准 JSON（如单引号、尾逗号、注释等）">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
           Repair
         </button>
-        <button class="btn btn-secondary" id="btn-unescape">
+        <button class="btn btn-secondary" id="btn-unescape" title="将带转义符的字符串还原为标准 JSON 对象">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
           Unescape
         </button>
@@ -94,15 +94,15 @@
     <!-- ══ Diff Tab ═══════════════════════════════════════════ -->
     <div class="tab-content" id="content-diff">
       <div class="diff-toolbar">
-        <button class="btn btn-primary" id="btn-compare">
+        <button class="btn btn-primary" id="btn-compare" title="计算左右两个 JSON 之间的差异并高亮">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
           对比
         </button>
-        <button class="btn btn-ghost" id="btn-swap">
+        <button class="btn btn-ghost" id="btn-swap" title="左右内容对调">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
           交换
         </button>
-        <button class="btn btn-ghost" id="btn-clear-diff">
+        <button class="btn btn-ghost" id="btn-clear-diff" title="清空两侧内容">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
           清空
         </button>

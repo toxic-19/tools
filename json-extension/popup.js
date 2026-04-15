@@ -137,6 +137,7 @@ btnFormat.addEventListener('click', () => {
     const parsed = JSON.parse(val);
     jsonInput.value = JSON.stringify(parsed, null, 2);
     flashSuccess();
+    resetScroll();
     refreshTreeViewIfNeeded();
   } catch (e) {
     setStatus('✗ 格式化失败', 'error');
@@ -155,6 +156,7 @@ btnCompact.addEventListener('click', () => {
     const parsed = JSON.parse(val);
     jsonInput.value = JSON.stringify(parsed);
     flashSuccess();
+    resetScroll();
     refreshTreeViewIfNeeded();
   } catch (e) {
     setStatus('✗ 压缩失败', 'error');
@@ -182,6 +184,7 @@ btnRepair.addEventListener('click', () => {
     jsonInput.value = JSON.stringify(JSON.parse(repaired), null, 2);
     setStatus('✓ 修复成功', 'success');
     hideError();
+    resetScroll();
     refreshTreeViewIfNeeded();
   } catch (e) {
     setStatus('✗ 修复失败', 'error');
@@ -201,6 +204,7 @@ btnUnescape.addEventListener('click', () => {
     if (typeof unescaped === 'string') {
       jsonInput.value = unescaped;
       flashSuccess();
+      resetScroll();
       refreshTreeViewIfNeeded();
     } else {
       setStatus('✓ 已经是 JSON', 'success');
@@ -417,13 +421,14 @@ const btnTheme  = document.getElementById('btn-theme');
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
+  // If light theme, show Moon (switch to dark). If dark, show Sun (switch to light).
   if (btnTheme) btnTheme.textContent = theme === 'light' ? '🌙' : '☀️';
   try { localStorage.setItem(THEME_KEY, theme); } catch (_) {}
 }
 
 function initTheme() {
-  let saved = 'dark';
-  try { saved = localStorage.getItem(THEME_KEY) || 'dark'; } catch (_) {}
+  let saved = 'light';
+  try { saved = localStorage.getItem(THEME_KEY) || 'light'; } catch (_) {}
   applyTheme(saved);
 }
 
@@ -432,6 +437,12 @@ if (btnTheme) {
     const current = document.documentElement.getAttribute('data-theme') || 'dark';
     applyTheme(current === 'dark' ? 'light' : 'dark');
   });
+}
+
+function resetScroll() {
+  jsonInput.scrollLeft = 0;
+  jsonInput.scrollTop = 0;
+  if (lineNums) lineNums.scrollTop = 0;
 }
 
 initTheme();
