@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "JSON Toolkit Pro",
+  "version": "1.0.0",
+  "description": "A powerful JSON formatter, repairer, compactor, and diff comparison tool.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "JSON Toolkit Pro",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": ["tabs"],
+  "web_accessible_resources": [
+    {
+      "resources": ["fullpage.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

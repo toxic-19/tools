@@ -1,0 +1,159 @@
+/* ── fullpage.css: overrides for full-window tab layout ── */
+
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header & toolbar must never shrink */
+.header {
+  padding: 14px 28px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.toolbar, .diff-toolbar {
+  flex-shrink: 0;
+}
+
+.header-actions {
+  margin-left: auto;
+}
+
+.fullpage-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(92,110,248,0.15);
+  color: #7d8ff8;
+  border: 1px solid rgba(92,110,248,0.3);
+  margin-left: 6px;
+  letter-spacing: 0.04em;
+}
+
+/* tab-content must not overflow its flex parent */
+.tab-content.active {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Formatter full-height layout ── */
+.fp-formatter-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.fp-formatter-body .editor-wrap {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 28px 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fp-formatter-body .editor-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fp-formatter-body .json-editor {
+  height: 100%;
+  min-height: 0;
+  resize: none;
+  overflow-y: auto;
+}
+
+.fp-formatter-body .line-numbers {
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+/* Inline info row next to label */
+.info-inline {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Diff full-height layout ─── */
+.fp-diff-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 28px 16px;
+  gap: 12px;
+}
+
+.fp-diff-inputs {
+  display: flex;
+  gap: 0;
+  flex: 0 0 280px;
+}
+
+.fp-diff-inputs .diff-input-block {
+  flex: 1;
+}
+
+.fp-diff-editor {
+  height: 230px !important;
+  min-height: unset !important;
+  resize: none !important;
+}
+
+/* Diff result takes remaining space and scrolls internally */
+.diff-result {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fp-diff-panels {
+  flex: 1;
+  min-height: 0;
+  max-height: unset !important;
+  display: flex;
+  overflow: hidden;
+}
+
+.fp-diff-panels .diff-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  height: auto;
+}
+
+/* Toolbar padding (already flex-shrink:0 from above) */
+.toolbar, .diff-toolbar {
+  padding: 10px 28px;
+}
+
+/* Error panel */
+.fp-formatter-body .error-panel {
+  margin: 0 0 8px;
+}
+
+/* Status badge inline in toolbar on fullpage */
+.tab-content.active > .toolbar .status-badge {
+  margin-left: 4px;
+}
