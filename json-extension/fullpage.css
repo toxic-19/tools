@@ -80,6 +80,12 @@ body {
 .fp-formatter-body .line-numbers {
   overflow-y: auto;
   pointer-events: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.fp-formatter-body .line-numbers::-webkit-scrollbar {
+  display: none;
 }
 
 /* Inline info row next to label */

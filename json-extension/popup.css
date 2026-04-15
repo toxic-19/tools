@@ -311,6 +311,12 @@ body {
   text-align: right;
   user-select: none;
   overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.line-numbers::-webkit-scrollbar {
+  display: none;
 }
 
 .json-editor {

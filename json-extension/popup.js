@@ -64,6 +64,10 @@ jsonInput.addEventListener('input', () => {
   validateLive();
 });
 
+jsonInput.addEventListener('paste', () => {
+  setTimeout(resetScroll, 0);
+});
+
 jsonInput.addEventListener('scroll', () => {
   lineNums.scrollTop = jsonInput.scrollTop;
 });
