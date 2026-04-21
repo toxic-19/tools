@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JSON Toolkit Pro — 全屏</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="popup.css" />
   <link rel="stylesheet" href="fullpage.css" />
 </head>
@@ -19,6 +22,7 @@
       <div class="tab-bar">
         <button class="tab active" data-tab="formatter" id="tab-formatter">格式化</button>
         <button class="tab" data-tab="diff" id="tab-diff">对比</button>
+        <button class="tab" data-tab="string" id="tab-string">字符串编辑</button>
       </div>
       <div class="header-actions">
         <button class="btn-theme" id="btn-theme" title="切换白天/夜晚模式">🌙</button>
@@ -92,6 +96,56 @@
             <span id="error-msg">JSON 格式错误</span>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- String Editor Tab -->
+    <div class="tab-content" id="content-string">
+      <div class="toolbar string-toolbar">
+        <button class="btn btn-primary" id="btn-string-load" title="从左侧 JSON 中加载可编辑字符串字段">
+          解析左侧 JSON
+        </button>
+        <select id="string-path-select" class="string-path-select" title="选择要编辑的字符串路径">
+          <option value="">请先加载 JSON</option>
+        </select>
+        <button class="btn btn-secondary" id="btn-string-apply" title="将编辑后的文本写回 JSON 并自动转义换行">
+          写回 JSON
+        </button>
+      </div>
+      <div class="string-quick-guide" id="string-quick-guide">
+        使用步骤：左侧粘贴 JSON -> 点击“解析左侧 JSON” -> 右侧选择路径并编辑 -> 点击“写回 JSON”。
+      </div>
+      <div class="string-split-wrap">
+        <div class="string-pane string-pane-left">
+          <div class="editor-header">
+            <span class="editor-label">左侧 JSON（1/3）</span>
+          </div>
+          <div class="editor-container">
+            <textarea
+              id="string-json-input"
+              class="json-editor"
+              placeholder="在这里粘贴完整 JSON..."
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+        <div class="string-pane string-pane-right">
+          <div class="editor-header">
+            <span class="editor-label">右侧字符串编辑（2/3）</span>
+            <span class="status-badge" id="string-status">等待解析</span>
+          </div>
+          <div class="editor-container">
+            <textarea
+              id="string-editor"
+              class="json-editor"
+              placeholder="选择一个字符串字段后，可在这里直接编辑。多行会在写回时自动转成 \n。"
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="info-bar">
+        <span id="string-meta">未选择字段</span>
       </div>
     </div>
 
