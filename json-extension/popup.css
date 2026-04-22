@@ -250,6 +250,22 @@ body {
 }
 .btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border); }
 
+.btn-sample {
+  background: rgba(92,110,248,0.14);
+  color: var(--accent);
+  border: 1px dashed rgba(92,110,248,0.45);
+  font-weight: 600;
+  padding: 6px 16px;
+  margin: 0 5px;
+}
+
+.btn-sample:hover {
+  background: rgba(92,110,248,0.22);
+  border-color: rgba(92,110,248,0.72);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
 /* ── Tab Content ─────────────────────────────── */
 .tab-content { display: none; flex-direction: column; flex: 1; }
 .tab-content.active { display: flex; }

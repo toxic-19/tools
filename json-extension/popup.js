@@ -26,8 +26,10 @@ const btnEscape   = document.getElementById('btn-escape');
 const btnUnescape = document.getElementById('btn-unescape');
 const btnCopy     = document.getElementById('btn-copy');
 const btnClear    = document.getElementById('btn-clear');
+const btnSampleFormat = document.getElementById('btn-sample-format');
 const btnStringLoad  = document.getElementById('btn-string-load');
 const btnStringApply = document.getElementById('btn-string-apply');
+const btnSampleString = document.getElementById('btn-sample-string');
 const stringPathSelect = document.getElementById('string-path-select');
 const stringJsonInput = document.getElementById('string-json-input');
 const stringEditor = document.getElementById('string-editor');
@@ -38,6 +40,7 @@ const stringMeta = document.getElementById('string-meta');
 const diffLeft    = document.getElementById('diff-left');
 const diffRight   = document.getElementById('diff-right');
 const btnCompare  = document.getElementById('btn-compare');
+const btnSampleDiff = document.getElementById('btn-sample-diff');
 const btnSwap     = document.getElementById('btn-swap');
 const btnClearDiff= document.getElementById('btn-clear-diff');
 const diffResult  = document.getElementById('diff-result');
@@ -49,6 +52,56 @@ const badgeB      = document.getElementById('badge-b');
 const stringQuickGuide = document.getElementById('string-quick-guide');
 let stringEntries = [];
 
+const FORMAT_SAMPLE = {
+  user: {
+    id: 1024,
+    name: "Alice",
+    roles: ["admin", "auditor"],
+    active: true
+  },
+  profile: {
+    city: "Shanghai",
+    tags: ["json", "toolkit", "demo"]
+  },
+  metrics: {
+    loginCount: 18,
+    lastLoginAt: "2026-04-20T09:30:00Z"
+  }
+};
+
+const DIFF_SAMPLE_LEFT = {
+  app: "JSON Toolkit Pro",
+  version: "1.0.0",
+  features: ["format", "repair", "diff"],
+  settings: {
+    theme: "light",
+    compactByDefault: false
+  }
+};
+
+const DIFF_SAMPLE_RIGHT = {
+  app: "JSON Toolkit Pro",
+  version: "1.1.0",
+  features: ["format", "repair", "diff", "string-edit"],
+  settings: {
+    theme: "dark",
+    compactByDefault: true
+  },
+  release: {
+    date: "2026-04-20",
+    notes: "Add string value editor"
+  }
+};
+
+const STRING_SAMPLE = {
+  title: "发布公告",
+  content: "第一行：欢迎使用\n第二行：支持多行编辑\n第三行：写回后自动恢复为 \\n",
+  meta: {
+    owner: "Team A",
+    prompt: "步骤1：粘贴 JSON\n步骤2：选择路径\n步骤3：写回"
+  }
+};
+
 /* ── Tab switching ─────────────────────────────────────────── */
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
@@ -56,9 +109,6 @@ tabs.forEach(tab => {
     contents.forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('content-' + tab.dataset.tab).classList.add('active');
-    if (tab.dataset.tab === 'string' && stringJsonInput && !stringJsonInput.value.trim() && jsonInput.value.trim()) {
-      stringJsonInput.value = jsonInput.value;
-    }
   });
 });
 
@@ -285,6 +335,18 @@ btnClear.addEventListener('click', () => {
   refreshTreeViewIfNeeded();
 });
 
+if (btnSampleFormat) {
+  btnSampleFormat.addEventListener('click', () => {
+    jsonInput.value = JSON.stringify(FORMAT_SAMPLE, null, 2);
+    updateLineNumbers();
+    updateInfo();
+    validateLive();
+    resetScroll();
+    refreshTreeViewIfNeeded();
+    flashSuccess();
+  });
+}
+
 function flashSuccess() {
   setStatus('✓ 完成', 'success');
 }
@@ -320,6 +382,16 @@ btnClearDiff.addEventListener('click', () => {
   badgeA.textContent = '-';
   badgeB.textContent = '-';
 });
+
+if (btnSampleDiff) {
+  btnSampleDiff.addEventListener('click', () => {
+    diffLeft.value = JSON.stringify(DIFF_SAMPLE_LEFT, null, 2);
+    diffRight.value = JSON.stringify(DIFF_SAMPLE_RIGHT, null, 2);
+    updateDiffBadge(diffLeft, badgeA);
+    updateDiffBadge(diffRight, badgeB);
+    diffResult.classList.add('hidden');
+  });
+}
 
 /* ── Compare ───────────────────────────────────────────────── */
 btnCompare.addEventListener('click', () => {
@@ -624,16 +696,11 @@ function applyStringEditToJson() {
   setByTokens(parsed, selected.tokens, stringEditor.value);
   const formatted = JSON.stringify(parsed, null, 2);
   stringJsonInput.value = formatted;
-  jsonInput.value = formatted;
-  updateLineNumbers();
-  updateInfo();
-  validateLive();
-  refreshTreeViewIfNeeded();
   loadStringEntries();
   stringPathSelect.value = id;
   updateStringEditorFromSelection();
   setStringStatus('已写回 JSON', 'success');
-  if (stringQuickGuide) stringQuickGuide.textContent = '写回完成：左侧 JSON 已更新，且已同步到“格式化”页。';
+  if (stringQuickGuide) stringQuickGuide.textContent = '写回完成：已更新当前页面左侧 JSON。';
 }
 
 initTheme();
@@ -662,10 +729,19 @@ if (stringJsonInput) {
     stringMeta.textContent = '左侧 JSON 已变化，请重新解析';
   });
 }
-setStringControlsEnabled(false);
-if (stringJsonInput && jsonInput.value.trim()) {
-  stringJsonInput.value = jsonInput.value;
+if (btnSampleString && stringJsonInput) {
+  btnSampleString.addEventListener('click', () => {
+    stringJsonInput.value = JSON.stringify(STRING_SAMPLE, null, 2);
+    loadStringEntries();
+    if (stringEntries.length) {
+      const preferred = stringEntries.find((entry) => entry.label === '$.content');
+      if (preferred && stringPathSelect) stringPathSelect.value = preferred.id;
+      updateStringEditorFromSelection();
+    }
+    if (stringQuickGuide) stringQuickGuide.textContent = '已填充示例：你可以直接修改右侧内容并点击“写回 JSON”。';
+  });
 }
+setStringControlsEnabled(false);
 
 /* ── View Toggle & Tree Rendering ──────────────────────── */
 let currentViewMode = 'raw';
