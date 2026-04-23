@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JSON Toolkit Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
@@ -17,6 +20,7 @@
       <div class="tab-bar">
         <button class="tab active" data-tab="formatter" id="tab-formatter">格式化</button>
         <button class="tab" data-tab="diff" id="tab-diff">对比</button>
+        <button class="tab" data-tab="string" id="tab-string">字符串编辑</button>
       </div>
       <div class="header-actions">
         <a href="https://github.com/toxic-19/tools/tree/main/json-extension" target="_blank" class="btn-github" title="查看 GitHub 源码">
@@ -64,6 +68,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
           清空
         </button>
+        <button class="btn btn-sample" id="btn-sample-format" title="填充格式化示例 JSON">示例</button>
       </div>
 
       <div class="editor-wrap">
@@ -104,6 +109,57 @@
       </div>
     </div>
 
+    <!-- String Editor Tab -->
+    <div class="tab-content" id="content-string">
+      <div class="toolbar string-toolbar">
+        <button class="btn btn-primary" id="btn-string-load" title="从左侧 JSON 中加载可编辑字符串字段">
+          解析左侧 JSON
+        </button>
+        <select id="string-path-select" class="string-path-select" title="选择要编辑的字符串路径">
+          <option value="">请先加载 JSON</option>
+        </select>
+        <button class="btn btn-sample" id="btn-sample-string" title="填充字符串编辑示例数据">示例</button>
+        <button class="btn btn-secondary" id="btn-string-apply" title="将编辑后的文本写回 JSON 并自动转义换行">
+          写回 JSON
+        </button>
+      </div>
+      <div class="string-quick-guide" id="string-quick-guide">
+        使用步骤：左侧粘贴 JSON -> 点击“解析左侧 JSON” -> 右侧选择路径并编辑 -> 点击“写回 JSON”。
+      </div>
+      <div class="string-split-wrap">
+        <div class="string-pane string-pane-left">
+          <div class="editor-header">
+            <span class="editor-label">左侧 JSON（1/3）</span>
+          </div>
+          <div class="editor-container">
+            <textarea
+              id="string-json-input"
+              class="json-editor"
+              placeholder="在这里粘贴完整 JSON..."
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+        <div class="string-pane string-pane-right">
+          <div class="editor-header">
+            <span class="editor-label">右侧字符串编辑（2/3）</span>
+            <span class="status-badge" id="string-status">等待解析</span>
+          </div>
+          <div class="editor-container">
+            <textarea
+              id="string-editor"
+              class="json-editor"
+              placeholder="选择一个字符串字段后，可在这里直接编辑。多行会在写回时自动转成 \n。"
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="info-bar">
+        <span id="string-meta">未选择字段</span>
+      </div>
+    </div>
+
     <!-- Diff Tab -->
     <div class="tab-content" id="content-diff">
       <div class="diff-toolbar">
@@ -111,6 +167,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
           对比
         </button>
+        <button class="btn btn-sample" id="btn-sample-diff" title="填充对比示例数据">示例</button>
         <button class="btn btn-ghost" id="btn-swap" title="左右内容对调">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
           交换

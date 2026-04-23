@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -142,6 +140,10 @@ body {
   transition: all 0.2s;
 }
 
+#tab-string {
+  min-width: 82px;
+}
+
 .tab:hover { color: var(--text-primary); }
 
 .tab.active {
@@ -267,6 +269,22 @@ body {
 }
 .btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border); }
 
+.btn-sample {
+  background: rgba(92,110,248,0.14);
+  color: var(--accent);
+  border: 1px dashed rgba(92,110,248,0.45);
+  font-weight: 600;
+  padding: 6px 16px;
+  margin: 0 5px;
+}
+
+.btn-sample:hover {
+  background: rgba(92,110,248,0.22);
+  border-color: rgba(92,110,248,0.72);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
 /* ── Tab Content ─────────────────────────────── */
 .tab-content { 
   display: none; 
@@ -377,6 +395,86 @@ body {
 }
 
 .info-bar span:not(:empty)::before { content: ''; }
+
+/* ── String editor tab ───────────────────────────────── */
+.string-toolbar {
+  gap: 8px;
+}
+
+.string-quick-guide {
+  margin: 8px 14px 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.string-path-select {
+  min-width: 320px;
+  max-width: 420px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  padding: 0 8px;
+  outline: none;
+}
+
+.string-path-select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px rgba(92,110,248,0.12);
+}
+
+.string-editor-wrap {
+  padding-bottom: 8px;
+}
+
+.string-path-select:disabled,
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.string-split-wrap {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  padding: 10px 14px 6px;
+}
+
+.string-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.string-pane-left {
+  flex: 1;
+  max-width: 34%;
+}
+
+.string-pane-right {
+  flex: 2;
+  min-width: 0;
+}
+
+#content-string .editor-container {
+  flex: 1;
+  min-height: 0;
+}
+
+#content-string .json-editor {
+  min-height: 0;
+  height: 100%;
+  resize: none;
+}
 
 /* ── Error Panel ─────────────────────────────── */
 .error-panel {

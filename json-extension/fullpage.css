@@ -154,6 +154,35 @@ body {
   padding: 10px 28px;
 }
 
+#content-string .string-toolbar {
+  padding: 10px 28px;
+}
+
+#content-string .string-quick-guide {
+  margin: 10px 28px 0;
+}
+
+#content-string .string-editor-wrap {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 28px 8px;
+}
+
+#content-string .editor-container {
+  flex: 1;
+  min-height: 0;
+}
+
+#content-string .json-editor {
+  min-height: 0;
+  height: 100%;
+  resize: none;
+}
+
+#content-string .string-split-wrap {
+  padding: 10px 28px 8px;
+}
+
 /* Error panel */
 .fp-formatter-body .error-panel {
   margin: 0 0 8px;

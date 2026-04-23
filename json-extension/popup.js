@@ -26,11 +26,21 @@ const btnEscape   = document.getElementById('btn-escape');
 const btnUnescape = document.getElementById('btn-unescape');
 const btnCopy     = document.getElementById('btn-copy');
 const btnClear    = document.getElementById('btn-clear');
+const btnSampleFormat = document.getElementById('btn-sample-format');
+const btnStringLoad  = document.getElementById('btn-string-load');
+const btnStringApply = document.getElementById('btn-string-apply');
+const btnSampleString = document.getElementById('btn-sample-string');
+const stringPathSelect = document.getElementById('string-path-select');
+const stringJsonInput = document.getElementById('string-json-input');
+const stringEditor = document.getElementById('string-editor');
+const stringStatus = document.getElementById('string-status');
+const stringMeta = document.getElementById('string-meta');
 
 // Diff
 const diffLeft    = document.getElementById('diff-left');
 const diffRight   = document.getElementById('diff-right');
 const btnCompare  = document.getElementById('btn-compare');
+const btnSampleDiff = document.getElementById('btn-sample-diff');
 const btnSwap     = document.getElementById('btn-swap');
 const btnClearDiff= document.getElementById('btn-clear-diff');
 const diffResult  = document.getElementById('diff-result');
@@ -39,6 +49,58 @@ const diffPanelR  = document.getElementById('diff-right-result');
 const diffStats   = document.getElementById('diff-stats');
 const badgeA      = document.getElementById('badge-a');
 const badgeB      = document.getElementById('badge-b');
+const stringQuickGuide = document.getElementById('string-quick-guide');
+let stringEntries = [];
+
+const FORMAT_SAMPLE = {
+  user: {
+    id: 1024,
+    name: "Alice",
+    roles: ["admin", "auditor"],
+    active: true
+  },
+  profile: {
+    city: "Shanghai",
+    tags: ["json", "toolkit", "demo"]
+  },
+  metrics: {
+    loginCount: 18,
+    lastLoginAt: "2026-04-20T09:30:00Z"
+  }
+};
+
+const DIFF_SAMPLE_LEFT = {
+  app: "JSON Toolkit Pro",
+  version: "1.0.0",
+  features: ["format", "repair", "diff"],
+  settings: {
+    theme: "light",
+    compactByDefault: false
+  }
+};
+
+const DIFF_SAMPLE_RIGHT = {
+  app: "JSON Toolkit Pro",
+  version: "1.1.0",
+  features: ["format", "repair", "diff", "string-edit"],
+  settings: {
+    theme: "dark",
+    compactByDefault: true
+  },
+  release: {
+    date: "2026-04-20",
+    notes: "Add string value editor"
+  }
+};
+
+const STRING_SAMPLE = {
+  title: "发布公告",
+  content: "第一行：欢迎使用\n第二行：支持多行编辑\n第三行：写回后自动恢复为 \\n",
+  meta: {
+    owner: "Team A",
+    prompt: "步骤1：粘贴 JSON\n步骤2：选择路径\n步骤3：写回"
+  }
+};
 
 /* ── Tab switching ─────────────────────────────────────────── */
 tabs.forEach(tab => {
@@ -274,6 +336,18 @@ btnClear.addEventListener('click', () => {
   refreshTreeViewIfNeeded();
 });
 
+if (btnSampleFormat) {
+  btnSampleFormat.addEventListener('click', () => {
+    jsonInput.value = JSON.stringify(FORMAT_SAMPLE, null, 2);
+    updateLineNumbers();
+    updateInfo();
+    validateLive();
+    resetScroll();
+    refreshTreeViewIfNeeded();
+    flashSuccess();
+  });
+}
+
 function flashSuccess() {
   setStatus('✓ 完成', 'success');
 }
@@ -309,6 +383,16 @@ btnClearDiff.addEventListener('click', () => {
   badgeA.textContent = '-';
   badgeB.textContent = '-';
 });
+
+if (btnSampleDiff) {
+  btnSampleDiff.addEventListener('click', () => {
+    diffLeft.value = JSON.stringify(DIFF_SAMPLE_LEFT, null, 2);
+    diffRight.value = JSON.stringify(DIFF_SAMPLE_RIGHT, null, 2);
+    updateDiffBadge(diffLeft, badgeA);
+    updateDiffBadge(diffRight, badgeB);
+    diffResult.classList.add('hidden');
+  });
+}
 
 /* ── Compare ───────────────────────────────────────────────── */
 btnCompare.addEventListener('click', () => {
@@ -480,18 +564,192 @@ function resetScroll() {
   });
 
   if (lineNums) lineNums.scrollTop = 0;
-  
-  const panels = [jsonTreeView, diffPanelL, diffPanelR];
-  panels.forEach(el => {
-    if (el) {
-      el.scrollTop = 0;
-      el.scrollLeft = 0;
-    }
-  });
 }
 
-resetScroll();
+/* ── String value edit helpers ────────────────────────────── */
+function setStringStatus(text, type) {
+  if (!stringStatus) return;
+  stringStatus.textContent = text;
+  stringStatus.className = 'status-badge' + (type ? ' ' + type : '');
+}
+
+function setStringControlsEnabled(enabled) {
+  if (stringPathSelect) stringPathSelect.disabled = !enabled;
+  if (btnStringApply) btnStringApply.disabled = !enabled;
+}
+
+function formatPathLabel(tokens) {
+  if (!tokens.length) return '$';
+  return '$' + tokens.map((token) => (
+    typeof token === 'number'
+      ? `[${token}]`
+      : /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(token)
+        ? `.${token}`
+        : `[${JSON.stringify(token)}]`
+  )).join('');
+}
+
+function collectStringEntries(node, tokens = []) {
+  if (typeof node === 'string') {
+    return [{ id: JSON.stringify(tokens), label: formatPathLabel(tokens), value: node, tokens }];
+  }
+  if (Array.isArray(node)) {
+    return node.flatMap((item, i) => collectStringEntries(item, [...tokens, i]));
+  }
+  if (node && typeof node === 'object') {
+    return Object.keys(node).flatMap((k) => collectStringEntries(node[k], [...tokens, k]));
+  }
+  return [];
+}
+
+function findStringEntryById(id) {
+  return stringEntries.find((entry) => entry.id === id);
+}
+
+function getByTokens(root, tokens) {
+  return tokens.reduce((acc, token) => (acc == null ? undefined : acc[token]), root);
+}
+
+function setByTokens(root, tokens, value) {
+  if (!tokens.length) return false;
+  let target = root;
+  for (let i = 0; i < tokens.length - 1; i++) target = target[tokens[i]];
+  target[tokens[tokens.length - 1]] = value;
+  return true;
+}
+
+function updateStringEditorFromSelection() {
+  if (!stringPathSelect || !stringEditor || !stringMeta) return;
+  const id = stringPathSelect.value;
+  const found = findStringEntryById(id);
+  if (!found) {
+    stringEditor.value = '';
+    stringMeta.textContent = '未选择字段';
+    setStringStatus('请选择路径', 'warning');
+    return;
+  }
+  stringEditor.value = found.value;
+  const lineCount = found.value.split('\n').length;
+  stringMeta.textContent = `${found.label} · ${found.value.length} 字符 · ${lineCount} 行`;
+  setStringStatus('可编辑', '');
+  if (stringQuickGuide) stringQuickGuide.textContent = '已进入编辑状态：支持直接输入多行，点击“写回 JSON”后会自动转成 JSON 转义字符串。';
+}
+
+function loadStringEntries() {
+  if (!stringPathSelect || !stringEditor || !stringMeta || !stringJsonInput) return;
+  const raw = stringJsonInput.value.trim();
+  if (!raw) {
+    setStringControlsEnabled(false);
+    setStringStatus('请先输入 JSON', 'warning');
+    stringMeta.textContent = '请先在左侧输入 JSON';
+    if (stringQuickGuide) stringQuickGuide.textContent = '左侧为空：请先粘贴 JSON，再点击“解析左侧 JSON”。';
+    return;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    setStringControlsEnabled(false);
+    setStringStatus('JSON 无效', 'error');
+    showError('左侧 JSON 格式错误: ' + e.message);
+    if (stringQuickGuide) stringQuickGuide.textContent = '检测到左侧 JSON 语法错误，请修复后再解析。';
+    return;
+  }
+  stringEntries = collectStringEntries(parsed);
+  stringPathSelect.innerHTML = '';
+  if (!stringEntries.length) {
+    setStringControlsEnabled(false);
+    stringPathSelect.innerHTML = '<option value="">未发现字符串字段</option>';
+    stringEditor.value = '';
+    stringMeta.textContent = '当前 JSON 没有可编辑的字符串值';
+    setStringStatus('没有字符串字段', 'warning');
+    if (stringQuickGuide) stringQuickGuide.textContent = '该 JSON 中没有字符串类型 value，因此这里没有可编辑目标。';
+    return;
+  }
+  setStringControlsEnabled(true);
+  const frag = document.createDocumentFragment();
+  stringEntries.forEach((entry, idx) => {
+    const opt = document.createElement('option');
+    opt.value = entry.id;
+    opt.textContent = entry.label;
+    if (idx === 0) opt.selected = true;
+    frag.appendChild(opt);
+  });
+  stringPathSelect.appendChild(frag);
+  updateStringEditorFromSelection();
+  setStringStatus(`已加载 ${stringEntries.length} 项`, 'success');
+}
+
+function applyStringEditToJson() {
+  if (!stringPathSelect || !stringEditor || !stringJsonInput) return;
+  const id = stringPathSelect.value;
+  const selected = findStringEntryById(id);
+  if (!selected) {
+    setStringStatus('请先选择路径', 'warning');
+    return;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(stringJsonInput.value);
+  } catch (e) {
+    setStringStatus('JSON 无效', 'error');
+    showError('左侧 JSON 格式错误: ' + e.message);
+    return;
+  }
+  if (typeof getByTokens(parsed, selected.tokens) !== 'string') {
+    setStringStatus('路径已失效', 'warning');
+    showError('路径对应的值不再是字符串，请重新加载字段');
+    return;
+  }
+  setByTokens(parsed, selected.tokens, stringEditor.value);
+  const formatted = JSON.stringify(parsed, null, 2);
+  stringJsonInput.value = formatted;
+  loadStringEntries();
+  stringPathSelect.value = id;
+  updateStringEditorFromSelection();
+  setStringStatus('已写回 JSON', 'success');
+  if (stringQuickGuide) stringQuickGuide.textContent = '写回完成：已更新当前页面左侧 JSON。';
+}
+
 initTheme();
+if (btnStringLoad) btnStringLoad.addEventListener('click', loadStringEntries);
+if (btnStringApply) btnStringApply.addEventListener('click', applyStringEditToJson);
+if (stringPathSelect) stringPathSelect.addEventListener('change', updateStringEditorFromSelection);
+if (stringEditor) {
+  stringEditor.addEventListener('input', () => {
+    if (!stringEntries.length) {
+      setStringStatus('请先加载字段', 'warning');
+      stringMeta.textContent = '当前输入不会自动关联到 JSON';
+      if (stringQuickGuide) stringQuickGuide.textContent = '你正在编辑纯文本，但尚未绑定到 JSON 字段。请先点击“加载字符串字段”。';
+      return;
+    }
+    const lineCount = stringEditor.value.split('\n').length;
+    stringMeta.textContent = `当前编辑中 · ${stringEditor.value.length} 字符 · ${lineCount} 行`;
+    setStringStatus('编辑中', '');
+  });
+}
+if (stringJsonInput) {
+  stringJsonInput.addEventListener('input', () => {
+    setStringControlsEnabled(false);
+    stringEntries = [];
+    if (stringPathSelect) stringPathSelect.innerHTML = '<option value="">请重新解析 JSON</option>';
+    setStringStatus('待解析', 'warning');
+    stringMeta.textContent = '左侧 JSON 已变化，请重新解析';
+  });
+}
+if (btnSampleString && stringJsonInput) {
+  btnSampleString.addEventListener('click', () => {
+    stringJsonInput.value = JSON.stringify(STRING_SAMPLE, null, 2);
+    loadStringEntries();
+    if (stringEntries.length) {
+      const preferred = stringEntries.find((entry) => entry.label === '$.content');
+      if (preferred && stringPathSelect) stringPathSelect.value = preferred.id;
+      updateStringEditorFromSelection();
+    }
+    if (stringQuickGuide) stringQuickGuide.textContent = '已填充示例：你可以直接修改右侧内容并点击“写回 JSON”。';
+  });
+}
+setStringControlsEnabled(false);
 
 /* ── View Toggle & Tree Rendering ──────────────────────── */
 let currentViewMode = 'raw';
