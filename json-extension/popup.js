@@ -407,8 +407,16 @@ btnCompare.addEventListener('click', () => {
   try { lObj = JSON.parse(lVal); } catch (e) { alert('JSON A 格式错误: ' + e.message); return; }
   try { rObj = JSON.parse(rVal); } catch (e) { alert('JSON B 格式错误: ' + e.message); return; }
 
-  const lLines = JSON.stringify(lObj, null, 2).split('\n');
-  const rLines = JSON.stringify(rObj, null, 2).split('\n');
+  // Auto-format both sides before compare
+  const lFormatted = JSON.stringify(lObj, null, 2);
+  const rFormatted = JSON.stringify(rObj, null, 2);
+  diffLeft.value = lFormatted;
+  diffRight.value = rFormatted;
+  updateDiffBadge(diffLeft, badgeA);
+  updateDiffBadge(diffRight, badgeB);
+
+  const lLines = lFormatted.split('\n');
+  const rLines = rFormatted.split('\n');
 
   const { leftAnnotated, rightAnnotated, stats } = computeDiff(lLines, rLines);
 
@@ -418,7 +426,7 @@ btnCompare.addEventListener('click', () => {
   diffResult.classList.remove('hidden');
 
   // Reset scroll and sync scroll
-  resetScroll(); 
+  resetScroll();
   syncScroll(diffPanelL, diffPanelR);
 });
 
