@@ -343,6 +343,11 @@ body {
 }
 .editor-container:focus-within { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(92,110,248,0.12); }
 
+/* Keyboard focus ring — visible only when navigating with the keyboard,
+   so mouse users don't see an unsightly outline on every click. */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--accent, #5c6ef8); outline-offset: 2px; border-radius: 4px; }
+
 .line-numbers {
   min-width: 38px;
   padding: 10px 6px 10px 10px;
@@ -620,10 +625,10 @@ body {
   text-overflow: ellipsis;
 }
 
-.diff-line.added   { background: var(--added);   color: var(--added-text); }
-.diff-line.removed { background: var(--removed);  color: var(--removed-text); }
-.diff-line.changed { background: var(--changed);  color: var(--changed-text); }
-.diff-line.equal   { color: var(--text-secondary); }
+.diff-line.added   { background: var(--added);   color: var(--added-text);   border-left: 3px solid var(--added-text);   padding-left: 4px; }
+.diff-line.removed { background: var(--removed);  color: var(--removed-text); border-left: 3px solid var(--removed-text); padding-left: 4px; }
+.diff-line.changed { background: var(--changed);  color: var(--changed-text); border-left: 3px solid var(--changed-text); padding-left: 4px; }
+.diff-line.equal   { color: var(--text-secondary); border-left: 3px solid transparent; padding-left: 4px; }
 
 .diff-line.added   .diff-line-num { color: var(--added-text); opacity: 0.6; }
 .diff-line.removed .diff-line-num { color: var(--removed-text); opacity: 0.6; }

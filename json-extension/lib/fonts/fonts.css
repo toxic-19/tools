@@ -1,0 +1,55 @@
+/* lib/fonts/fonts.css — local font definitions.
+ *
+ * Drop Inter & JetBrains Mono WOFF2 files into this directory and uncomment
+ * the @font-face blocks below to use them. Until then, the UI falls back to
+ * the system font stack declared in popup.css.
+ *
+ * Recommended free WOFF2 sources:
+ *   - Inter:    https://github.com/rsms/inter/releases  (extract OFL files)
+ *   - JetBrains Mono: https://github.com/JetBrains/JetBrainsMono/releases
+ *
+ * Naming convention used below:
+ *   lib/fonts/Inter-Regular.woff2
+ *   lib/fonts/Inter-Medium.woff2
+ *   lib/fonts/Inter-SemiBold.woff2
+ *   lib/fonts/JetBrainsMono-Regular.woff2
+ *   lib/fonts/JetBrainsMono-Medium.woff2
+ */
+
+/*
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('Inter-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('Inter-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('Inter-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('JetBrainsMono-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('JetBrainsMono-Medium.woff2') format('woff2');
+}
+*/

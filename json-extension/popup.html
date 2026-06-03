@@ -4,9 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JSON Toolkit Pro</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="lib/fonts/fonts.css" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
@@ -17,18 +15,18 @@
         <span class="logo-icon">⚡</span>
         <span class="logo-text">JSON Toolkit <span class="logo-pro">Pro</span></span>
       </div>
-      <div class="tab-bar">
-        <button class="tab active" data-tab="formatter" id="tab-formatter">格式化</button>
-        <button class="tab" data-tab="diff" id="tab-diff">对比</button>
-        <button class="tab" data-tab="string" id="tab-string">字符串编辑</button>
+      <div class="tab-bar" role="tablist" aria-label="JSON Toolkit Tabs">
+        <button class="tab active" role="tab" aria-selected="true" data-tab="formatter" id="tab-formatter">格式化</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="diff" id="tab-diff">对比</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="string" id="tab-string">字符串编辑</button>
       </div>
       <div class="header-actions">
-        <a href="https://github.com/toxic-19/tools/tree/main/json-extension" target="_blank" class="btn-github" title="查看 GitHub 源码">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+        <a href="https://github.com/toxic-19/tools/tree/main/json-extension" target="_blank" class="btn-github" aria-label="在 GitHub 查看源码" title="查看 GitHub 源码">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
         </a>
-        <button class="btn-theme" id="btn-theme" title="切换白天/夜晚模式">🌙</button>
-        <button class="btn-expand" id="btn-expand" title="在新标签页全屏打开">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button class="btn-theme" id="btn-theme" aria-label="切换主题" title="切换白天/夜晚模式">🌙</button>
+        <button class="btn-expand" id="btn-expand" aria-label="在新标签页中全屏打开" title="在新标签页全屏打开">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
             <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
           </svg>
@@ -37,7 +35,7 @@
     </header>
 
     <!-- Formatter Tab -->
-    <div class="tab-content active" id="content-formatter">
+    <div class="tab-content active" id="content-formatter" role="tabpanel" aria-labelledby="tab-formatter">
       <div class="toolbar">
         <button class="btn btn-primary" id="btn-format" title="美化并缩进 JSON 代码">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
@@ -75,12 +73,12 @@
         <div class="editor-header">
           <div class="editor-header-left">
             <span class="editor-label">JSON 输入</span>
-            <div class="view-toggles" id="view-toggles">
-              <button class="view-toggle active" data-mode="raw">源码</button>
-              <button class="view-toggle" data-mode="tree">视图 (可折叠)</button>
+            <div class="view-toggles" id="view-toggles" role="radiogroup" aria-label="视图模式">
+              <button class="view-toggle active" role="radio" aria-checked="true" data-mode="raw">源码</button>
+              <button class="view-toggle" role="radio" aria-checked="false" data-mode="tree">视图 (可折叠)</button>
             </div>
           </div>
-          <span class="status-badge" id="status-badge">就绪</span>
+          <span class="status-badge" id="status-badge" role="status" aria-live="polite">就绪</span>
         </div>
         <div class="editor-container" id="editor-container">
           <div class="line-numbers" id="line-numbers"></div>
@@ -92,6 +90,7 @@
             autocomplete="off"
             autocorrect="off"
             autocapitalize="off"
+            aria-label="JSON 输入编辑器"
           ></textarea>
           <div id="json-tree-view" class="json-tree-view hidden"></div>
         </div>
@@ -103,14 +102,14 @@
         <span id="type-info"></span>
       </div>
 
-      <div class="error-panel hidden" id="error-panel">
-        <span class="error-icon">⚠</span>
+      <div class="error-panel hidden" id="error-panel" role="alert" aria-live="assertive">
+        <span class="error-icon" aria-hidden="true">⚠</span>
         <span id="error-msg">JSON 格式错误</span>
       </div>
     </div>
 
     <!-- String Editor Tab -->
-    <div class="tab-content" id="content-string">
+    <div class="tab-content" id="content-string" role="tabpanel" aria-labelledby="tab-string">
       <div class="toolbar string-toolbar">
         <button class="btn btn-primary" id="btn-string-load" title="从左侧 JSON 中加载可编辑字符串字段">
           解析左侧 JSON
@@ -137,13 +136,14 @@
               class="json-editor"
               placeholder="在这里粘贴完整 JSON..."
               spellcheck="false"
+              aria-label="字符串编辑：源 JSON"
             ></textarea>
           </div>
         </div>
         <div class="string-pane string-pane-right">
           <div class="editor-header">
             <span class="editor-label">右侧字符串编辑（2/3）</span>
-            <span class="status-badge" id="string-status">等待解析</span>
+            <span class="status-badge" id="string-status" role="status" aria-live="polite">等待解析</span>
           </div>
           <div class="editor-container">
             <textarea
@@ -151,6 +151,7 @@
               class="json-editor"
               placeholder="选择一个字符串字段后，可在这里直接编辑。多行会在写回时自动转成 \n。"
               spellcheck="false"
+              aria-label="字符串编辑：值编辑器"
             ></textarea>
           </div>
         </div>
@@ -161,7 +162,7 @@
     </div>
 
     <!-- Diff Tab -->
-    <div class="tab-content" id="content-diff">
+    <div class="tab-content" id="content-diff" role="tabpanel" aria-labelledby="tab-diff">
       <div class="diff-toolbar">
         <button class="btn btn-primary" id="btn-compare" title="计算左右两个 JSON 之间的差异并高亮">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
@@ -177,10 +178,10 @@
           清空
         </button>
         <div class="spacer"></div>
-        <div class="diff-legend">
-          <span class="legend-item added">+ 新增</span>
-          <span class="legend-item removed">- 删除</span>
-          <span class="legend-item changed">~ 修改</span>
+        <div class="diff-legend" role="list" aria-label="差异图例">
+          <span class="legend-item added" role="listitem"><span aria-hidden="true">+</span> 新增</span>
+          <span class="legend-item removed" role="listitem"><span aria-hidden="true">−</span> 删除</span>
+          <span class="legend-item changed" role="listitem"><span aria-hidden="true">~</span> 修改</span>
         </div>
       </div>
 
@@ -188,24 +189,24 @@
         <div class="diff-input-block">
           <div class="editor-header">
             <span class="editor-label">JSON A（原始）</span>
-            <span class="diff-badge badge-a" id="badge-a">-</span>
+            <span class="diff-badge badge-a" id="badge-a" role="status" aria-label="JSON A 类型">-</span>
           </div>
-          <textarea id="diff-left" class="json-editor diff-editor" placeholder='粘贴原始 JSON...' spellcheck="false"></textarea>
+          <textarea id="diff-left" class="json-editor diff-editor" placeholder='粘贴原始 JSON...' spellcheck="false" aria-label="JSON A 原始内容"></textarea>
         </div>
-        <div class="diff-divider"></div>
+        <div class="diff-divider" aria-hidden="true"></div>
         <div class="diff-input-block">
           <div class="editor-header">
             <span class="editor-label">JSON B（修改后）</span>
-            <span class="diff-badge badge-b" id="badge-b">-</span>
+            <span class="diff-badge badge-b" id="badge-b" role="status" aria-label="JSON B 类型">-</span>
           </div>
-          <textarea id="diff-right" class="json-editor diff-editor" placeholder='粘贴修改后 JSON...' spellcheck="false"></textarea>
+          <textarea id="diff-right" class="json-editor diff-editor" placeholder='粘贴修改后 JSON...' spellcheck="false" aria-label="JSON B 修改后内容"></textarea>
         </div>
       </div>
 
-      <div class="diff-result hidden" id="diff-result">
+      <div class="diff-result hidden" id="diff-result" role="region" aria-label="对比结果">
         <div class="diff-result-header">
           <span>对比结果</span>
-          <span class="diff-stats" id="diff-stats"></span>
+          <span class="diff-stats" id="diff-stats" aria-live="polite"></span>
         </div>
         <div class="diff-panels" id="diff-panels">
           <div class="diff-panel" id="diff-left-result"></div>
@@ -216,6 +217,6 @@
   </div>
 
   <script src="lib/jsonrepair.js"></script>
-  <script src="popup.js"></script>
+  <script type="module" src="src/app.js"></script>
 </body>
 </html>
