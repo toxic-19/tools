@@ -5,6 +5,6 @@
   "type": "module",
   "description": "Unit tests for pure functions in src/. Run with: npm test",
   "scripts": {
-    "test": "node --test tests/lcs.test.js tests/paths.test.js tests/operations.test.js tests/i18n.test.js"
+    "test": "node --test tests/lcs.test.js tests/paths.test.js tests/operations.test.js tests/i18n.test.js tests/json-errors.test.js tests/structural.test.js tests/sync.test.js"
   }
 }

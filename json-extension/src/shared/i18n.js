@@ -23,6 +23,7 @@ const LOCALES = {
     'status.repairFailed': '✗ 修复失败',
     'status.formatFailed': '✗ 格式化失败',
     'status.compactFailed': '✗ 压缩失败',
+    'status.stringifyFailed': '✗ Stringify 失败',
     'status.unescapeFailed': '✗ 反转义失败',
     'error.formatHint': '请先修复 JSON 再格式化',
     'error.compactHint': '请先修复 JSON 再压缩',

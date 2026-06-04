@@ -39,13 +39,18 @@ export function tryRepair(input) {
   }
 }
 
-export function tryEscape(input) {
+/**
+ * Stringify: turn a JSON body into a JSON string value (double encoded).
+ * Use case: embed the JSON as a string field inside another JSON document,
+ * or paste it inline as a string literal in source code.
+ *   {"a":1} → '"{\\"a\\":1}"'
+ */
+export function tryStringify(input) {
   try {
     const parsed = JSON.parse(input);
     return { ok: true, value: JSON.stringify(JSON.stringify(parsed)) };
-  } catch (_) {
-    // Not JSON: stringify raw text so the user can escape arbitrary strings.
-    return { ok: true, value: JSON.stringify(input) };
+  } catch (e) {
+    return { ok: false, error: '需要合法 JSON 才能 Stringify: ' + e.message };
   }
 }
 

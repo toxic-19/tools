@@ -368,6 +368,19 @@ body {
   display: none;
 }
 
+.line-num {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+.line-num.error-line {
+  background: var(--error, #fde0e0);
+  color: var(--removed-text, #b82020);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--removed-text, #b82020);
+}
+
 .json-editor {
   flex: 1;
   padding: 10px 12px;
@@ -683,6 +696,32 @@ body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
+.diff-mode-toggle-group {
+  display: flex;
+  background: rgba(0,0,0,0.15);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-right: 12px;
+}
+
+.diff-mode-toggle {
+  padding: 4px 12px;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.diff-mode-toggle.active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
 .json-tree-view {
   flex: 1;
   background: transparent;
@@ -740,6 +779,47 @@ html[data-theme="light"] .json-key { color: #7047f5; }
 .json-number { color: var(--warning); }
 .json-boolean { color: var(--accent); }
 .json-null { color: var(--text-muted); font-style: italic; }
+
+/* Editable leaves: cursor + hover background + focus ring */
+.tree-leaf { padding: 1px 3px; border-radius: 3px; transition: background 0.12s; }
+.tree-leaf-editable { cursor: text; }
+.tree-leaf-editable:hover { background: rgba(124, 130, 255, 0.12); }
+.tree-leaf-editable:focus-visible { outline: 2px solid var(--accent, #5c6ef8); outline-offset: 1px; background: rgba(124, 130, 255, 0.08); }
+.tree-inline-editor {
+  font: inherit;
+  color: inherit;
+  background: var(--bg-input);
+  border: 1px solid var(--accent, #5c6ef8);
+  border-radius: 3px;
+  padding: 1px 4px;
+  min-width: 60px;
+  max-width: 100%;
+  outline: none;
+}
+.tree-context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 140px;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,0.1));
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  padding: 4px 0;
+  font-size: 12px;
+}
+html[data-theme="dark"] .tree-context-menu { background: #2a2d3e; border-color: rgba(255,255,255,0.08); }
+.tree-context-item {
+  display: block;
+  width: 100%;
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.tree-context-item:hover { background: rgba(124, 130, 255, 0.18); }
 
 .json-bracket {
   color: var(--text-secondary);

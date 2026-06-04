@@ -2,6 +2,7 @@
 
 import { els } from '../shared/dom.js';
 import { buildTreeNode } from './render.js';
+import { setByTokens } from '../string-edit/paths.js';
 
 let currentMode = 'raw';
 
@@ -11,13 +12,29 @@ function renderTree() {
   view.innerHTML = '';
   const val = els.jsonInput().value.trim();
   if (!val) return;
+  let parsed;
   try {
-    const parsed = JSON.parse(val);
-    view.appendChild(buildTreeNode(parsed, true));
+    parsed = JSON.parse(val);
   } catch (e) {
     const errObj = { Error: 'Invalid JSON', Message: e.message };
-    view.appendChild(buildTreeNode(errObj, true));
+    view.appendChild(buildTreeNode(errObj));
+    return;
   }
+  // Pass an onCommit that mutates a fresh parse of the input and re-renders
+  // the tree (or the source, depending on the current view).
+  view.appendChild(buildTreeNode(parsed, {
+    tokens: [],
+    onCommit: (newRaw, tokens) => {
+      const input = els.jsonInput();
+      if (!input) return;
+      let root;
+      try { root = JSON.parse(input.value); }
+      catch (_) { return; }
+      setByTokens(root, tokens, newRaw);
+      input.value = JSON.stringify(root, null, 2);
+      renderTree();
+    },
+  }));
 }
 
 export function refreshTreeViewIfNeeded() {

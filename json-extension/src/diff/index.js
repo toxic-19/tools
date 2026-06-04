@@ -3,7 +3,8 @@
 import { els } from '../shared/dom.js';
 import { t } from '../shared/i18n.js';
 import { computeDiff } from './lcs.js';
-import { renderDiffPanel } from './render.js';
+import { renderLineDiffPanel, renderStructuralDiff } from './render.js';
+import { structuralDiff, summarize } from './structural.js';
 
 const SAMPLE_LEFT = {
   app: 'JSON Toolkit Pro',
@@ -19,6 +20,8 @@ const SAMPLE_RIGHT = {
   settings: { theme: 'dark', compactByDefault: true },
   release: { date: '2026-04-20', notes: 'Add string value editor' },
 };
+
+let currentMode = 'line'; // 'line' | 'structural'
 
 function updateBadge(el, badge) {
   const val = el.value.trim();
@@ -47,6 +50,26 @@ function syncScroll(a, b) {
   });
 }
 
+function renderLineMode(lObj, rObj) {
+  const lFormatted = JSON.stringify(lObj, null, 2);
+  const rFormatted = JSON.stringify(rObj, null, 2);
+  const lLines = lFormatted.split('\n');
+  const rLines = rFormatted.split('\n');
+  const { leftAnnotated, rightAnnotated, stats } = computeDiff(lLines, rLines);
+  els.diffPanelL().innerHTML = renderLineDiffPanel(leftAnnotated);
+  els.diffPanelR().innerHTML = renderLineDiffPanel(rightAnnotated);
+  els.diffStats().textContent = `新增 ${stats.added} · 删除 ${stats.removed} · 修改 ${stats.changed}`;
+}
+
+function renderStructuralMode(lObj, rObj) {
+  const changes = structuralDiff(lObj, rObj);
+  const stats = summarize(changes);
+  els.diffPanelL().innerHTML = '';
+  els.diffPanelR().innerHTML = renderStructuralDiff(changes);
+  els.diffStats().textContent =
+    `新增 ${stats.added} · 删除 ${stats.removed} · 修改 ${stats.changed} · 类型变 ${stats.typeChanged}`;
+}
+
 function compare() {
   const lVal = els.diffLeft().value.trim();
   const rVal = els.diffRight().value.trim();
@@ -59,23 +82,37 @@ function compare() {
   try { lObj = JSON.parse(lVal); } catch (e) { alert(t('error.jsonAInvalid') + ': ' + e.message); return; }
   try { rObj = JSON.parse(rVal); } catch (e) { alert(t('error.jsonBInvalid') + ': ' + e.message); return; }
 
-  const lFormatted = JSON.stringify(lObj, null, 2);
-  const rFormatted = JSON.stringify(rObj, null, 2);
-  els.diffLeft().value = lFormatted;
-  els.diffRight().value = rFormatted;
-  updateBadge(els.diffLeft(), els.badgeA());
-  updateBadge(els.diffRight(), els.badgeB());
+  // Auto-format both sides before compare (only meaningful for line mode).
+  if (currentMode === 'line') {
+    els.diffLeft().value = JSON.stringify(lObj, null, 2);
+    els.diffRight().value = JSON.stringify(rObj, null, 2);
+    updateBadge(els.diffLeft(), els.badgeA());
+    updateBadge(els.diffRight(), els.badgeB());
+  }
 
-  const lLines = lFormatted.split('\n');
-  const rLines = rFormatted.split('\n');
-  const { leftAnnotated, rightAnnotated, stats } = computeDiff(lLines, rLines);
+  if (currentMode === 'line') renderLineMode(lObj, rObj);
+  else renderStructuralMode(lObj, rObj);
 
-  els.diffPanelL().innerHTML = renderDiffPanel(leftAnnotated);
-  els.diffPanelR().innerHTML = renderDiffPanel(rightAnnotated);
-  els.diffStats().textContent = `新增 ${stats.added} · 删除 ${stats.removed} · 修改 ${stats.changed}`;
   els.diffResult().classList.remove('hidden');
 
-  syncScroll(els.diffPanelL(), els.diffPanelR());
+  if (currentMode === 'line') {
+    syncScroll(els.diffPanelL(), els.diffPanelR());
+  }
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  const toggles = document.querySelectorAll('.diff-mode-toggle');
+  toggles.forEach((b) => {
+    const on = b.dataset.mode === mode;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  // Hide the right panel in structural mode (single-column result).
+  const right = els.diffPanelR();
+  if (right) right.style.display = mode === 'structural' ? 'none' : '';
+  const left = els.diffPanelL();
+  if (left) left.style.gridColumn = mode === 'structural' ? '1 / -1' : '';
 }
 
 export function initDiff() {
@@ -114,4 +151,10 @@ export function initDiff() {
     updateBadge(right, badgeB);
     els.diffResult().classList.add('hidden');
   });
+
+  document.querySelectorAll('.diff-mode-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => setMode(btn.dataset.mode));
+  });
+
+  setMode('line');
 }

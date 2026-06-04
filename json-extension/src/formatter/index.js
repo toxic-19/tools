@@ -2,9 +2,10 @@
 
 import { els, formatBytes } from '../shared/dom.js';
 import { setStatus, showError, hideError, flashSuccess } from './status.js';
-import { tryFormat, tryCompact, tryRepair, tryEscape, tryUnescape } from './operations.js';
+import { tryFormat, tryCompact, tryRepair, tryStringify, tryUnescape } from './operations.js';
 import { refreshTreeViewIfNeeded } from '../tree-view/index.js';
 import { t } from '../shared/i18n.js';
+import { safeJsonParse } from './json-errors.js';
 
 const SAMPLE = {
   user: { id: 1024, name: 'Alice', roles: ['admin', 'auditor'], active: true },
@@ -17,8 +18,50 @@ function updateLineNumbers() {
   const lines = els.lineNums();
   if (!input || !lines) return;
   const count = input.value.split('\n').length;
-  lines.innerHTML = Array.from({ length: count }, (_, i) => i + 1).join('<br>');
+  // Render each number as its own <span> so we can mark individual lines
+  // (e.g. the error line) without losing the structure on re-render.
+  lines.innerHTML = Array.from({ length: count }, (_, i) => {
+    return `<span class="line-num">${i + 1}</span>${i < count - 1 ? '<br>' : ''}`;
+  }).join('');
   lines.scrollTop = input.scrollTop;
+}
+
+// Toggle the error-line class on the gutter span for `line`.
+// Idempotent: re-calling with the same line is a no-op visually.
+function markErrorLine(line) {
+  const lines = els.lineNums();
+  if (!lines) return null;
+  const previous = lines.querySelector('.error-line');
+  if (previous) previous.classList.remove('error-line');
+  if (!line || line < 1) return null;
+  const spans = lines.querySelectorAll('.line-num');
+  const target = spans[line - 1];
+  if (target) target.classList.add('error-line');
+  return line;
+}
+
+function validateLive() {
+  const input = els.jsonInput();
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) {
+    setStatus(t('status.ready'), '');
+    hideError();
+    updateLineNumbers();
+    return;
+  }
+  const result = safeJsonParse(val);
+  if (result.ok) {
+    setStatus(t('status.valid'), 'success');
+    hideError();
+    updateLineNumbers();
+    return;
+  }
+  setStatus(t('status.invalid'), 'error');
+  const { line, column, message } = result.error;
+  const locTag = line ? ` (第 ${line} 行 第 ${column} 列)` : '';
+  showError(message + locTag);
+  markErrorLine(line);
 }
 
 function updateInfo() {
@@ -39,22 +82,6 @@ function updateInfo() {
   }
 }
 
-function validateLive() {
-  const input = els.jsonInput();
-  if (!input) return;
-  const val = input.value.trim();
-  if (!val) { setStatus(t('status.ready'), ''); hideError(); return; }
-  try { JSON.parse(val); setStatus(t('status.valid'), 'success'); hideError(); }
-  catch (e) { setStatus(t('status.invalid'), 'error'); showError(e.message); }
-}
-
-function resetScroll() {
-  [els.jsonInput(), els.diffLeft(), els.diffRight()].forEach((el) => {
-    if (el) { el.scrollLeft = 0; el.scrollTop = 0; }
-  });
-  if (els.lineNums()) els.lineNums().scrollTop = 0;
-}
-
 function apply(op) {
   const input = els.jsonInput();
   if (!input) return;
@@ -72,7 +99,6 @@ function apply(op) {
   } else {
     setStatus(t('status.noRepairNeeded'), 'success');
   }
-  resetScroll();
   refreshTreeViewIfNeeded();
   updateLineNumbers();
   updateInfo();
@@ -88,7 +114,11 @@ export function initFormatter() {
     updateInfo();
     validateLive();
   });
-  input.addEventListener('paste', () => setTimeout(resetScroll, 0));
+  input.addEventListener('paste', () => {
+    // Don't reset scroll on paste — the user just dropped content and may
+    // want to keep their place. updateLineNumbers will re-render the gutter
+    // when the input event fires after the paste commits.
+  });
   input.addEventListener('scroll', () => { if (els.lineNums()) els.lineNums().scrollTop = input.scrollTop; });
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Tab') {
@@ -103,7 +133,7 @@ export function initFormatter() {
   els.btnFormat() && els.btnFormat().addEventListener('click', () => apply(tryFormat));
   els.btnCompact() && els.btnCompact().addEventListener('click', () => apply(tryCompact));
   els.btnRepair() && els.btnRepair().addEventListener('click', () => apply(tryRepair));
-  els.btnEscape() && els.btnEscape().addEventListener('click', () => apply(tryEscape));
+  els.btnStringify() && els.btnStringify().addEventListener('click', () => apply(tryStringify));
   els.btnUnescape() && els.btnUnescape().addEventListener('click', () => apply(tryUnescape));
 
   els.btnCopy() && els.btnCopy().addEventListener('click', async () => {
@@ -135,7 +165,6 @@ export function initFormatter() {
     updateLineNumbers();
     updateInfo();
     validateLive();
-    resetScroll();
     refreshTreeViewIfNeeded();
     flashSuccess();
   });
@@ -145,5 +174,3 @@ export function initFormatter() {
   updateInfo();
   validateLive();
 }
-
-export { resetScroll };
