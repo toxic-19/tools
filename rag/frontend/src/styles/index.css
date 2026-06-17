@@ -1,0 +1,405 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================================================
+   Theme Variables - 5 Themes
+   ================================================================ */
+:root {
+  /* Default Blue */
+  --primary: #4F7CF8;
+  --primary-hover: #3B66F0;
+  --primary-bg: #EFF4FE;
+  --primary-border: #C5D8FC;
+  --primary-text: #fff;
+
+  /* Semantic Colors */
+  --sem-embed: #8B5CF6;
+  --sem-embed-bg: #F5F3FF;
+  --sem-retrieval: #10B981;
+  --sem-retrieval-bg: #ECFDF5;
+  --sem-rerank: #F59E0B;
+  --sem-rerank-bg: #FFFBEB;
+  --sem-llm: #EC4899;
+  --sem-llm-bg: #FDF2F8;
+
+  /* Status Colors */
+  --success: #10B981;
+  --success-bg: #ECFDF5;
+  --danger: #EF4444;
+  --danger-bg: #FEF2F2;
+  --danger-hover: #DC2626;
+  --warning: #F59E0B;
+  --warning-bg: #FFFBEB;
+
+  /* Gray Scale */
+  --gray-50: #FAFAFA;
+  --gray-100: #F4F4F5;
+  --gray-200: #E4E4E7;
+  --gray-300: #D4D4D8;
+  --gray-400: #A1A1AA;
+  --gray-500: #71717A;
+  --gray-600: #52525B;
+  --gray-700: #3F3F46;
+  --gray-800: #27272A;
+  --gray-900: #18181B;
+
+  /* Base Colors */
+  --bg: var(--gray-50);
+  --card: #FFFFFF;
+  --text: var(--gray-900);
+  --text-secondary: var(--gray-600);
+  --text-muted: var(--gray-400);
+  --border: var(--gray-200);
+  --shadow-color: rgba(0, 0, 0, 0.08);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Sidebar */
+  --sidebar-w: 260px;
+
+  /* Transitions */
+  --transition: 0.2s ease;
+}
+
+/* Amber Theme */
+[data-theme="amber"] {
+  --primary: #D4A574;
+  --primary-hover: #C4956A;
+  --primary-bg: #FDF8F3;
+  --primary-border: #E8D5C4;
+  --primary-text: #18181B;
+}
+
+/* Emerald Theme */
+[data-theme="emerald"] {
+  --primary: #10B981;
+  --primary-hover: #059669;
+  --primary-bg: #ECFDF5;
+  --primary-border: #A7F3D0;
+  --primary-text: #fff;
+}
+
+/* Rose Theme */
+[data-theme="rose"] {
+  --primary: #E879A9;
+  --primary-hover: #F472B6;
+  --primary-bg: #FDF2F8;
+  --primary-border: #FBCFE8;
+  --primary-text: #18181B;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  --primary: #A78BFA;
+  --primary-hover: #8B5CF6;
+  --primary-bg: rgba(139, 92, 246, 0.15);
+  --primary-border: rgba(139, 92, 246, 0.3);
+  --primary-text: #fff;
+
+  --bg: #09090B;
+  --card: #18181B;
+  --text: #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --border: #27272A;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+
+  --sem-embed-bg: rgba(139, 92, 246, 0.15);
+  --sem-embed: #A78BFA;
+  --sem-retrieval-bg: rgba(16, 185, 129, 0.15);
+  --sem-retrieval: #34D399;
+  --sem-rerank-bg: rgba(245, 158, 11, 0.15);
+  --sem-rerank: #FBBF24;
+  --sem-llm-bg: rgba(236, 72, 153, 0.15);
+  --sem-llm: #F472B6;
+
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --warning-bg: rgba(245, 158, 11, 0.15);
+}
+
+/* ================================================================
+   Style Variants
+   ================================================================ */
+
+/* ================================================================
+   Style Variants - 3 种风格有明显差异
+   ================================================================ */
+
+/* ---- Style 1: Default (标准) ----
+   - 圆角适中（8-16px）
+   - 有边框分隔
+   - 纯色背景
+   - 阴影柔和
+*/
+[data-style="default"] {
+  --card-style-radius: 12px;
+  --card-style-radius-sm: 8px;
+  --card-style-bg: var(--card);
+  --card-style-border: var(--border);
+  --card-style-shadow: 0 1px 3px var(--shadow-color);
+  --card-style-blur: none;
+  --card-style-opacity: 1;
+}
+
+/* ---- Style 2: Glass (玻璃拟态) ----
+   - 大圆角（20px+）
+   - 半透明背景
+   - 模糊效果
+   - 渐变色背景
+   - 边框更亮
+*/
+[data-style="glass"] {
+  --card-style-radius: 20px;
+  --card-style-radius-sm: 14px;
+  --card-style-bg: rgba(255, 255, 255, 0.55);
+  --card-style-border: rgba(255, 255, 255, 0.4);
+  --card-style-shadow:
+    0 8px 32px rgba(31, 38, 135, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --card-style-blur: blur(20px) saturate(180%);
+  --card-style-opacity: 0.9;
+}
+
+[data-theme="dark"][data-style="glass"] {
+  --card-style-bg: rgba(24, 24, 27, 0.55);
+  --card-style-border: rgba(255, 255, 255, 0.1);
+  --card-style-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Glass 主题：渐变背景 */
+[data-style="glass"] body {
+  background:
+    radial-gradient(at 0% 0%, var(--primary-bg) 0%, transparent 50%),
+    radial-gradient(at 100% 100%, var(--sem-llm-bg) 0%, transparent 50%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* ---- Style 3: Minimal (极简) ----
+   - 零圆角（方形）
+   - 无边框
+   - 用底色/分隔线代替边框
+   - 字体更轻盈
+*/
+[data-style="minimal"] {
+  --card-style-radius: 0;
+  --card-style-radius-sm: 0;
+  --card-style-bg: transparent;
+  --card-style-border: transparent;
+  --card-style-shadow: none;
+  --card-style-blur: none;
+  --card-style-opacity: 1;
+}
+
+[data-style="minimal"] body {
+  background: var(--bg);
+}
+
+/* ================================================================
+   通过 CSS 类统一应用风格（避免每个组件重复写）
+   ================================================================ */
+.style-card {
+  background: var(--card-style-bg);
+  border: 1px solid var(--card-style-border);
+  border-radius: var(--card-style-radius);
+  box-shadow: var(--card-style-shadow);
+  backdrop-filter: var(--card-style-blur);
+  -webkit-backdrop-filter: var(--card-style-blur);
+  opacity: var(--card-style-opacity);
+  transition: all var(--transition);
+}
+
+.style-card-sm {
+  background: var(--card-style-bg);
+  border: 1px solid var(--card-style-border);
+  border-radius: var(--card-style-radius-sm);
+  box-shadow: var(--card-style-shadow);
+  backdrop-filter: var(--card-style-blur);
+  -webkit-backdrop-filter: var(--card-style-blur);
+  transition: all var(--transition);
+}
+
+/* ================================================================
+   Base Styles
+   ================================================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+}
+
+::selection {
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 3px;
+}
+
+/* ================================================================
+   Animations
+   ================================================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes bounce {
+  to {
+    transform: translateY(-5px);
+    opacity: 0.3;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+/* ================================================================
+   Component Utilities
+   ================================================================ */
+.transition-all {
+  transition: all var(--transition);
+}
+
+/* ================================================================
+   Markdown Body Styles
+   ================================================================ */
+.markdown-body {
+  word-break: break-word;
+}
+
+.markdown-body p {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-body p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body sup {
+  display: inline-block;
+  vertical-align: super;
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+.markdown-body pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.25rem;
+}
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

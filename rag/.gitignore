@@ -1,0 +1,77 @@
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# ============================================================
+# Environment & Secrets
+# ============================================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+
+# ============================================================
+# Logs
+# ============================================================
+*.log
+logs/
+*.pid
+*.seed
+
+# ============================================================
+# OS
+# ============================================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+
+# ============================================================
+# Project Specific
+# ============================================================
+
+# Uploaded files (user documents)
+uploads/
+data/
+static/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/
+frontend/.cache/
+
+# Frontend env
+frontend/.env
+frontend/.env.local
+
+# IDE
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

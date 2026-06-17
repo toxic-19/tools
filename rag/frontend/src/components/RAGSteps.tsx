@@ -1,0 +1,207 @@
+import React, { useState } from 'react';
+
+export type RAGStepStatus = 'pending' | 'running' | 'done';
+
+export interface RAGStep {
+  id: string;
+  title: string;
+  detail: string;
+  status: RAGStepStatus;
+}
+
+interface RAGStepsProps {
+  steps: RAGStep[];
+  defaultCollapsed?: boolean;
+}
+
+const StepIcon: React.FC<{ status: RAGStepStatus; index: number }> = ({ status, index }) => {
+  if (status === 'done') {
+    return (
+      <div
+        className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: 'var(--sem-retrieval)' }}
+      >
+        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </div>
+    );
+  }
+  if (status === 'running') {
+    return (
+      <div
+        className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center"
+        style={{
+          borderColor: 'var(--primary)',
+          borderWidth: '2px',
+          borderStyle: 'solid',
+          borderTopColor: 'transparent',
+          animation: 'spin 1s linear infinite',
+        }}
+      />
+    );
+  }
+  return (
+    <div
+      className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-semibold"
+      style={{
+        borderColor: 'var(--border)',
+        borderWidth: '1.5px',
+        borderStyle: 'solid',
+        color: 'var(--text-muted)',
+        backgroundColor: 'var(--card)',
+      }}
+    >
+      {index + 1}
+    </div>
+  );
+};
+
+/** 格式化耗时（ms → 可读字符串） */
+function fmtMs(ms?: number): string {
+  if (ms == null) return '';
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+const RAGSteps: React.FC<RAGStepsProps> = ({ steps, defaultCollapsed = false }) => {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
+  // 统计：总耗时（从最后一个有 detail 的 step 提取）
+  const allDone = steps.every((s) => s.status === 'done');
+  const hasRunning = steps.some((s) => s.status === 'running');
+
+  // 从步骤 detail 中提取耗时数字用于折叠摘要
+  const totalTime = steps.reduce((sum, s) => {
+    const match = s.detail.match(/([\d.]+)ms/);
+    return match ? sum + parseFloat(match[1]) : sum;
+  }, 0);
+
+  return (
+    <div
+      className="rounded-lg my-2 font-mono text-[12.5px] overflow-hidden"
+      style={{
+        backgroundColor: 'var(--gray-50)',
+        borderColor: 'var(--border)',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+      }}
+    >
+      {/* 折叠摘要行 — 始终显示，点击切换展开 */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-150 hover:opacity-80"
+        style={{ backgroundColor: 'transparent' }}
+      >
+        {/* 状态图标 */}
+        {hasRunning ? (
+          <div
+            className="w-4 h-4 rounded-full flex-shrink-0"
+            style={{
+              borderColor: 'var(--primary)',
+              borderWidth: '2px',
+              borderStyle: 'solid',
+              borderTopColor: 'transparent',
+              animation: 'spin 1s linear infinite',
+            }}
+          />
+        ) : allDone ? (
+          <svg
+            className="w-4 h-4 flex-shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--sem-retrieval)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ) : null}
+
+        <span
+          className="text-[12px] font-semibold flex-1 text-left"
+          style={{ color: hasRunning ? 'var(--primary)' : allDone ? 'var(--text-secondary)' : 'var(--text-muted)' }}
+        >
+          {hasRunning
+            ? 'RAG 检索流程进行中...'
+            : allDone
+              ? `RAG 流程完成${totalTime > 0 ? ' · ' + fmtMs(totalTime) : ''}`
+              : 'RAG 流程'}
+        </span>
+
+        {/* 折叠箭头 */}
+        <svg
+          className="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200"
+          style={{
+            transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)',
+            color: 'var(--text-muted)',
+          }}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {/* 展开的步骤详情 */}
+      {!collapsed && (
+        <div className="px-3 pb-2 border-t" style={{ borderColor: 'var(--border)' }}>
+          {steps.map((step, index) => (
+            <div
+              key={step.id}
+              className="flex items-start gap-2.5 py-1.5"
+              style={{
+                color: step.status === 'pending' ? 'var(--text-muted)' : 'var(--text)',
+                opacity: step.status === 'pending' ? 0.6 : 1,
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <StepIcon status={step.status} index={index} />
+              <div className="flex-1 min-w-0 leading-relaxed">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                    style={{
+                      backgroundColor: 'var(--card)',
+                      color: step.status === 'done' ? 'var(--sem-retrieval)' : 'var(--text-muted)',
+                      borderColor: 'var(--border)',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                    }}
+                  >
+                    RAG-{index + 1}
+                  </span>
+                  <span className="font-semibold">{step.title}</span>
+                  {step.status === 'running' && (
+                    <span
+                      className="inline-block w-1.5 h-3.5 ml-0.5"
+                      style={{
+                        backgroundColor: 'var(--primary)',
+                        animation: 'blink 1s infinite',
+                      }}
+                    />
+                  )}
+                </div>
+                {step.detail && (
+                  <div
+                    className="text-[11.5px] mt-0.5 ml-0.5"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    {step.detail}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RAGSteps;

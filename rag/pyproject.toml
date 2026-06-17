@@ -1,0 +1,29 @@
+[project]
+name = "rag-demo"
+version = "1.0.0"
+description = "RAG Demo - 知识库问答系统（文档导入 → 向量检索 → Rerank → LLM 问答）"
+requires-python = ">=3.10"
+dependencies = [
+    "pymilvus>=2.4.0",
+    "openai>=1.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "python-multipart>=0.0.6",
+    "numpy>=1.24.0",
+    "PyMuPDF>=1.23.0",
+    "python-docx>=0.8.11",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+local = [
+    "sentence-transformers>=2.2.0",
+]
+
+[dependency-groups]
+dev = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
