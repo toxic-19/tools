@@ -47,7 +47,7 @@ function buildStepsFromResponse(resp: QueryResponse): RAGStep[] {
   ];
 }
 
-/** 等待中的步骤（真实进度未知，只显示 running 态） */
+/** 等待中的步骤（初始状态：第 1 步 running，其余 pending） */
 function buildWaitingSteps(): RAGStep[] {
   return [
     { id: 'embed', title: 'Query Embedding...', detail: '将问题转为向量', status: 'running' },
@@ -55,6 +55,17 @@ function buildWaitingSteps(): RAGStep[] {
     { id: 'rerank', title: 'Rerank 重排序...', detail: '', status: 'pending' },
     { id: 'llm', title: 'LLM 生成答案...', detail: '', status: 'pending' },
   ];
+}
+
+/** 将当前 running 的步骤推进到下一步 */
+function advanceSteps(steps: RAGStep[]): RAGStep[] {
+  const runningIdx = steps.findIndex((s) => s.status === 'running');
+  if (runningIdx === -1 || runningIdx >= steps.length - 1) return steps;
+  return steps.map((s, i) => {
+    if (i === runningIdx) return { ...s, status: 'done' as RAGStepStatus };
+    if (i === runningIdx + 1) return { ...s, status: 'running' as RAGStepStatus };
+    return s;
+  });
 }
 
 /** 从历史消息恢复步骤 */
@@ -142,8 +153,20 @@ export function useChat(conversationId: number | null) {
 
     const currentConvId = conversationId;
 
+    // 定时器：每隔一段时间将 running 状态推进到下一步，模拟流程进展
+    const stepTimer = setInterval(() => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantId && msg.ragSteps
+            ? { ...msg, ragSteps: advanceSteps(msg.ragSteps) }
+            : msg
+        )
+      );
+    }, 1500); // 每 1.5s 推进一步
+
     try {
       const response = await query({ question });
+      clearInterval(stepTimer);
 
       const finalSteps = buildStepsFromResponse(response);
 
@@ -176,6 +199,7 @@ export function useChat(conversationId: number | null) {
       ]).catch((err) => console.warn('保存聊天记录失败:', err));
 
     } catch (err) {
+      clearInterval(stepTimer);
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantId

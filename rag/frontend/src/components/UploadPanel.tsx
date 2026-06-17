@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { UploadIcon, PackageIcon } from './Icons';
-import { ingestFile, ingestDefault, Record } from '../api';
+import { ingestFiles, ingestDefault, Record } from '../api';
 
 interface UploadPanelProps {
   records: Record[];
@@ -26,17 +26,24 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ records, onRefresh, onToast }
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ percent: 0, text: '' });
 
-  const handleFileSelect = useCallback(async (file: File | null) => {
-    if (!file) return;
+  const handleFileSelect = useCallback(async (files: FileList | File[] | null) => {
+    if (!files || files.length === 0) return;
+    const fileArray = Array.from(files);
 
     setUploading(true);
-    setProgress({ percent: 30, text: `正在解析: ${file.name} ...` });
+    setProgress({ percent: 30, text: `正在处理 ${fileArray.length} 个文件...` });
 
     try {
-      setProgress({ percent: 60, text: `正在向量化: ${file.name} ...` });
-      const result = await ingestFile(file);
-      setProgress({ percent: 100, text: `完成: ${result.filename} (${result.chunks} 个片段)` });
-      onToast(`导入成功: ${result.filename}`, 'success');
+      setProgress({ percent: 60, text: `正在上传并向量化...` });
+      const { results, errors } = await ingestFiles(fileArray);
+      setProgress({ percent: 100, text: `完成` });
+      
+      if (results.length > 0) {
+        onToast(`成功导入 ${results.length} 个文件`, 'success');
+      }
+      if (errors && errors.length > 0) {
+        onToast(`部分导入失败: ${errors.join('; ')}`, 'error');
+      }
       onRefresh();
     } catch (err) {
       setProgress({ percent: 0, text: '' });
@@ -49,8 +56,8 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ records, onRefresh, onToast }
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) handleFileSelect(files);
   }, [handleFileSelect]);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -94,7 +101,8 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ records, onRefresh, onToast }
               type="file"
               accept=".txt,.md,.pdf,.docx"
               className="hidden"
-              onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+              multiple
+              onChange={(e) => handleFileSelect(e.target.files)}
               disabled={uploading}
             />
             <UploadIcon className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />

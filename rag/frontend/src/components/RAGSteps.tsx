@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export type RAGStepStatus = 'pending' | 'running' | 'done';
 
@@ -67,9 +67,23 @@ function fmtMs(ms?: number): string {
 const RAGSteps: React.FC<RAGStepsProps> = ({ steps, defaultCollapsed = false }) => {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
+  // 当 defaultCollapsed 变化时（loading → done），同步更新内部折叠状态
+  useEffect(() => {
+    setCollapsed(defaultCollapsed);
+  }, [defaultCollapsed]);
+
   // 统计：总耗时（从最后一个有 detail 的 step 提取）
   const allDone = steps.every((s) => s.status === 'done');
-  const hasRunning = steps.some((s) => s.status === 'running');
+  const isLoading = !allDone;
+
+  // 找到当前正在执行的步骤（running 或最后一个 done 的下一步）
+  const runningStep = steps.find((s) => s.status === 'running');
+  const doneCount = steps.filter((s) => s.status === 'done').length;
+  const currentLabel = runningStep
+    ? runningStep.title
+    : doneCount < steps.length
+      ? steps[doneCount]?.title ?? '准备中...'
+      : '准备中...';
 
   // 从步骤 detail 中提取耗时数字用于折叠摘要
   const totalTime = steps.reduce((sum, s) => {
@@ -77,6 +91,45 @@ const RAGSteps: React.FC<RAGStepsProps> = ({ steps, defaultCollapsed = false }) 
     return match ? sum + parseFloat(match[1]) : sum;
   }, 0);
 
+  // ---- Loading 态：简洁单行，动态显示当前步骤名 ----
+  if (isLoading) {
+    return (
+      <div
+        className="flex items-center gap-2 px-3 py-2.5 rounded-lg my-2"
+        style={{
+          backgroundColor: 'var(--gray-50)',
+          borderColor: 'var(--border)',
+          borderWidth: '1px',
+          borderStyle: 'solid',
+        }}
+      >
+        <div
+          className="w-4 h-4 rounded-full flex-shrink-0"
+          style={{
+            borderColor: 'var(--primary)',
+            borderWidth: '2px',
+            borderStyle: 'solid',
+            borderTopColor: 'transparent',
+            animation: 'spin 1s linear infinite',
+          }}
+        />
+        <span
+          className="text-[12.5px] font-medium"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          {currentLabel}
+        </span>
+        <span
+          className="text-[11px] ml-auto flex-shrink-0"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          {doneCount}/{steps.length}
+        </span>
+      </div>
+    );
+  }
+
+  // ---- 完成态：可折叠的步骤面板 ----
   return (
     <div
       className="rounded-lg my-2 font-mono text-[12.5px] overflow-hidden"
@@ -93,41 +146,24 @@ const RAGSteps: React.FC<RAGStepsProps> = ({ steps, defaultCollapsed = false }) 
         className="w-full flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors duration-150 hover:opacity-80"
         style={{ backgroundColor: 'transparent' }}
       >
-        {/* 状态图标 */}
-        {hasRunning ? (
-          <div
-            className="w-4 h-4 rounded-full flex-shrink-0"
-            style={{
-              borderColor: 'var(--primary)',
-              borderWidth: '2px',
-              borderStyle: 'solid',
-              borderTopColor: 'transparent',
-              animation: 'spin 1s linear infinite',
-            }}
-          />
-        ) : allDone ? (
-          <svg
-            className="w-4 h-4 flex-shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--sem-retrieval)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        ) : null}
+        {/* 完成图标 */}
+        <svg
+          className="w-4 h-4 flex-shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--sem-retrieval)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
 
         <span
           className="text-[12px] font-semibold flex-1 text-left"
-          style={{ color: hasRunning ? 'var(--primary)' : allDone ? 'var(--text-secondary)' : 'var(--text-muted)' }}
+          style={{ color: 'var(--text-secondary)' }}
         >
-          {hasRunning
-            ? 'RAG 检索流程进行中...'
-            : allDone
-              ? `RAG 流程完成${totalTime > 0 ? ' · ' + fmtMs(totalTime) : ''}`
-              : 'RAG 流程'}
+          RAG 流程完成{totalTime > 0 ? ' · ' + fmtMs(totalTime) : ''}
         </span>
 
         {/* 折叠箭头 */}
@@ -156,8 +192,7 @@ const RAGSteps: React.FC<RAGStepsProps> = ({ steps, defaultCollapsed = false }) 
               key={step.id}
               className="flex items-start gap-2.5 py-1.5"
               style={{
-                color: step.status === 'pending' ? 'var(--text-muted)' : 'var(--text)',
-                opacity: step.status === 'pending' ? 0.6 : 1,
+                color: 'var(--text)',
                 transition: 'all 0.2s ease',
               }}
             >
@@ -168,7 +203,7 @@ const RAGSteps: React.FC<RAGStepsProps> = ({ steps, defaultCollapsed = false }) 
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded"
                     style={{
                       backgroundColor: 'var(--card)',
-                      color: step.status === 'done' ? 'var(--sem-retrieval)' : 'var(--text-muted)',
+                      color: 'var(--sem-retrieval)',
                       borderColor: 'var(--border)',
                       borderWidth: '1px',
                       borderStyle: 'solid',
@@ -177,15 +212,6 @@ const RAGSteps: React.FC<RAGStepsProps> = ({ steps, defaultCollapsed = false }) 
                     RAG-{index + 1}
                   </span>
                   <span className="font-semibold">{step.title}</span>
-                  {step.status === 'running' && (
-                    <span
-                      className="inline-block w-1.5 h-3.5 ml-0.5"
-                      style={{
-                        backgroundColor: 'var(--primary)',
-                        animation: 'blink 1s infinite',
-                      }}
-                    />
-                  )}
                 </div>
                 {step.detail && (
                   <div

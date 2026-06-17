@@ -117,14 +117,14 @@ export async function query(request: QueryRequest): Promise<QueryResponse> {
   return handleResponse<QueryResponse>(response);
 }
 
-export async function ingestFile(file: File): Promise<IngestResponse> {
+export async function ingestFiles(files: File[]): Promise<{ results: IngestResponse[], errors: string[] }> {
   const formData = new FormData();
-  formData.append('file', file);
-  const response = await fetch(`${API_BASE}/ingest/file`, {
+  files.forEach(file => formData.append('files', file));
+  const response = await fetch(`${API_BASE}/ingest/files`, {
     method: 'POST',
     body: formData,
   });
-  return handleResponse<IngestResponse>(response);
+  return handleResponse<{ results: IngestResponse[], errors: string[] }>(response);
 }
 
 export async function ingestDefault(): Promise<{ chunks: number }> {

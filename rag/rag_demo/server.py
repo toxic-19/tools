@@ -161,27 +161,42 @@ async def health():
         return {"status": "degraded", "error": str(e)}
 
 
-@app.post("/api/ingest/file", response_model=IngestResponse)
-async def ingest_file(file: UploadFile = File(...)):
-    """上传并导入文件到知识库。支持: .txt, .md, .pdf, .docx"""
+@app.post("/api/ingest/files")
+async def ingest_files(files: List[UploadFile] = File(...)):
+    """上传并导入多个文件到知识库。支持: .txt, .md, .pdf, .docx"""
     allowed_exts = {".txt", ".md", ".pdf", ".docx"}
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in allowed_exts:
-        raise HTTPException(400, f"不支持的文件格式: {ext}，支持: {allowed_exts}")
-
+    
+    results = []
+    errors = []
+    
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-    save_path = os.path.join(UPLOAD_DIR, file.filename)
-    with open(save_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+    
+    for file in files:
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in allowed_exts:
+            errors.append(f"{file.filename}: 不支持的文件格式 {ext}，支持: {allowed_exts}")
+            continue
 
-    try:
-        pipeline = get_pipeline()
-        result = pipeline.ingest_file(save_path)
-        return IngestResponse(**result)
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(500, f"导入失败: {str(e)}")
+        save_path = os.path.join(UPLOAD_DIR, file.filename)
+        with open(save_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+
+        try:
+            pipeline = get_pipeline()
+            result = pipeline.ingest_file(save_path)
+            results.append(IngestResponse(**result).dict())
+        except Exception as e:
+            traceback.print_exc()
+            errors.append(f"{file.filename}: {str(e)}")
+            
+    if errors and not results:
+        raise HTTPException(500, f"导入全部失败: {'; '.join(errors)}")
+
+    return {
+        "results": results,
+        "errors": errors
+    }
 
 
 @app.post("/api/ingest/directory")

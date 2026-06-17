@@ -24,6 +24,20 @@ interface SidebarProps {
   onDeleteConversation: (id: number) => void;
 }
 
+const NAV_SECTIONS = [
+  {
+    label: '功能',
+    items: [
+      { id: 'chat', label: '智能问答', icon: ChatIcon },
+      { id: 'upload', label: '文档管理', icon: FileIcon },
+    ],
+  },
+  {
+    label: '管理',
+    items: [{ id: 'settings', label: '系统配置', icon: SettingsIcon }],
+  },
+];
+
 const Sidebar: React.FC<SidebarProps> = ({
   activePanel,
   onPanelChange,
@@ -37,22 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const sections = [
-    {
-      label: '功能',
-      items: [
-        { id: 'chat', label: '智能问答', icon: ChatIcon },
-        { id: 'upload', label: '文档管理', icon: FileIcon },
-      ],
-    },
-    {
-      label: '管理',
-      items: [{ id: 'settings', label: '系统配置', icon: SettingsIcon }],
-    },
-  ];
 
   // 开始编辑
   const startEdit = (conv: Conversation) => {
@@ -85,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div
-      className="w-[var(--sidebar-w)] flex flex-col transition-all duration-200"
+      className="w-[var(--sidebar-w)] flex flex-col duration-200"
       style={{
         backgroundColor: 'var(--card-style-bg, var(--card))',
         borderRightColor: 'var(--card-style-border, var(--border))',
@@ -133,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </span>
           <button
             onClick={onNewConversation}
-            className="w-5 h-5 rounded flex items-center justify-center transition-all duration-150 hover:opacity-70"
+            className="w-5 h-5 rounded flex items-center justify-center transition-opacity duration-150 hover:opacity-70"
             style={{ color: 'var(--primary)' }}
             title="新建对话"
           >
@@ -152,19 +151,16 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
           {conversations.map((conv) => {
             const isActive = conv.id === activeConversationId;
-            const isHovered = conv.id === hoveredId;
             const isEditing = conv.id === editingId;
 
             return (
               <div
                 key={conv.id}
-                className="relative flex items-center rounded-lg cursor-pointer transition-all duration-150"
+                className="group relative flex items-center rounded-lg cursor-pointer transition-colors duration-150"
                 style={{
                   backgroundColor: isActive ? 'var(--gray-100)' : 'transparent',
                   padding: '6px 8px',
                 }}
-                onMouseEnter={() => setHoveredId(conv.id)}
-                onMouseLeave={() => setHoveredId(null)}
                 onClick={() => {
                   if (!isEditing) {
                     onSwitchConversation(conv.id);
@@ -227,42 +223,40 @@ const Sidebar: React.FC<SidebarProps> = ({
                         {conv.message_count ? `${conv.message_count} 条消息` : '空对话'}
                       </div>
                     </div>
-                    {/* 操作按钮 — hover 时显示 */}
-                    {isHovered && (
-                      <div
-                        className="flex items-center gap-0.5 flex-shrink-0"
-                        onClick={(e) => e.stopPropagation()}
+                    {/* 操作按钮 — 通过 CSS group-hover 显示，无需 state */}
+                    <div
+                      className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEdit(conv);
+                        }}
+                        className="w-5 h-5 rounded flex items-center justify-center transition-opacity duration-150 hover:opacity-70"
+                        style={{ color: 'var(--text-muted)' }}
+                        title="重命名"
                       >
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startEdit(conv);
-                          }}
-                          className="w-5 h-5 rounded flex items-center justify-center transition-all duration-150 hover:opacity-70"
-                          style={{ color: 'var(--text-muted)' }}
-                          title="重命名"
-                        >
-                          <EditIcon className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (
-                              window.confirm(
-                                `确定删除对话「${conv.title}」及其所有消息？`
-                              )
-                            ) {
-                              onDeleteConversation(conv.id);
-                            }
-                          }}
-                          className="w-5 h-5 rounded flex items-center justify-center transition-all duration-150 hover:opacity-70"
-                          style={{ color: 'var(--danger, #e74c3c)' }}
-                          title="删除对话"
-                        >
-                          <TrashIcon className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
+                        <EditIcon className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (
+                            window.confirm(
+                              `确定删除对话「${conv.title}」及其所有消息？`
+                            )
+                          ) {
+                            onDeleteConversation(conv.id);
+                          }
+                        }}
+                        className="w-5 h-5 rounded flex items-center justify-center transition-opacity duration-150 hover:opacity-70"
+                        style={{ color: 'var(--danger, #e74c3c)' }}
+                        title="删除对话"
+                      >
+                        <TrashIcon className="w-3 h-3" />
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
@@ -283,7 +277,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation */}
       <div className="flex-1 p-3 overflow-y-auto">
-        {sections.map((section) => (
+        {NAV_SECTIONS.map((section) => (
           <div key={section.label}>
             <div
               className="text-[10px] font-semibold uppercase tracking-wide px-3 py-3"
@@ -298,14 +292,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onPanelChange(item.id)}
-                  className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-all duration-200 text-[13.5px] font-medium"
+                  className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-colors duration-200 text-[13.5px] font-medium"
                   style={{
                     color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
                   }}
                 >
                   <Icon className="w-[18px] h-[18px]" />
                   <span
-                    className="transition-all duration-200"
+                    className="transition-colors duration-200"
                     style={{
                       textDecoration: isActive ? 'underline' : 'none',
                       textUnderlineOffset: '4px',

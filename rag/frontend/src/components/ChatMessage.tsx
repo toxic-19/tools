@@ -171,9 +171,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               backgroundColor: isUser ? 'var(--primary)' : 'var(--card-style-bg, var(--card))',
               color: isUser ? 'var(--primary-text)' : 'var(--text)',
               border: isUser ? 'none' : '1px solid var(--card-style-border, var(--border))',
-              borderRadius: `var(--card-style-radius, 12px) var(--card-style-radius, 12px) ${
-                isUser ? '4px' : 'var(--card-style-radius, 12px)'
-              } 4px`,
+              borderRadius: isUser
+                ? `var(--card-style-radius, 12px) var(--card-style-radius, 12px) 4px var(--card-style-radius, 12px)`
+                : `var(--card-style-radius, 12px) var(--card-style-radius, 12px) var(--card-style-radius, 12px) 4px`,
               boxShadow: isUser ? '0 1px 2px rgba(0,0,0,0.05)' : 'var(--card-style-shadow, none)',
               backdropFilter: 'var(--card-style-blur, none)',
               WebkitBackdropFilter: 'var(--card-style-blur, none)',
