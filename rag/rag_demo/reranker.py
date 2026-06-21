@@ -31,6 +31,7 @@ class Reranker:
 
     def _init(self):
         """根据模式初始化 rerank 模型。"""
+        self._backend = "none"  # "openvino" | "sentence_transformers" | "none"
         if self.mode == "cross_encoder":
             self._init_cross_encoder()
         elif self.mode == "llm":
@@ -51,18 +52,74 @@ class Reranker:
           - BAAI/bge-reranker-base   (轻量版)
           - jinaai/jina-reranker-v2  (多语言)
         ============================================================
+        加载优先级:
+          1. optimum[openvino]  → OpenVINO IR(Intel GPU/CPU 加速)
+          2. sentence-transformers → transformers (CPU fallback)
+          3. LLM 打分模式 (回退)
         """
+        # ---- 1) 优先尝试 OpenVINO 加速(支持 Intel Arc / CPU 加速) ----
+        if self._try_init_openvino():
+            self._backend = "openvino"
+            return
+        # ---- 2) 回退到 sentence-transformers / transformers ----
         try:
             from sentence_transformers import CrossEncoder
-            print(f"  [Rerank] 加载 Cross-Encoder: {RERANK_MODEL_NAME}")
+            print(f"  [Rerank] 加载 Cross-Encoder (transformers): {RERANK_MODEL_NAME}")
             self._model = CrossEncoder(RERANK_MODEL_NAME)
-            print("  [Rerank] Cross-Encoder 加载完成")
+            self._backend = "sentence_transformers"
+            print("  [Rerank] Cross-Encoder 加载完成 (CPU 模式)")
         except ImportError:
             print("  [Rerank] sentence-transformers 未安装，回退到 LLM 模式")
             self.mode = "llm"
         except Exception as e:
             print(f"  [Rerank] Cross-Encoder 加载失败: {e}，回退到 LLM 模式")
             self.mode = "llm"
+
+    def _try_init_openvino(self) -> bool:
+        """尝试用 optimum[openvino] 加载并 export 模型。失败返回 False 让调用方走 fallback。"""
+        try:
+            from optimum.intel import OVModelForSequenceClassification
+            from transformers import AutoTokenizer
+        except ImportError:
+            print("  [Rerank] optimum[openvino] 未安装,跳过 OpenVINO 加速")
+            return False
+
+        # 选 device: 优先 GPU(Intel Arc / iGPU),否则 CPU
+        try:
+            from openvino import Core as OVCore
+            core = OVCore()
+            available = core.available_devices
+            if "GPU" in available:
+                ov_device = "GPU"
+            elif "AUTO" in available:
+                ov_device = "AUTO"
+            else:
+                ov_device = "CPU"
+        except Exception:
+            ov_device = "CPU"
+
+        # 诊断: 让 optimum 加载前先打印 endpoint
+        import os
+        import huggingface_hub.constants as _hf
+        print(f"  [Rerank] HF_ENDPOINT env = {os.environ.get('HF_ENDPOINT', '<None>')}")
+        print(f"  [Rerank] huggingface_hub.ENDPOINT = {_hf.ENDPOINT}")
+
+        # optimum 的缓存目录约定: <model_name>/  下放 OV IR 文件
+        # 存在就跳过 export,直接 load_from_transformers 也不会重复导出(有缓存)
+        try:
+            print(f"  [Rerank] 加载/导出 OpenVINO IR (device={ov_device}): {RERANK_MODEL_NAME}")
+            self._model = OVModelForSequenceClassification.from_pretrained(
+                RERANK_MODEL_NAME,
+                export=True,
+                device=ov_device,
+            )
+            self._tokenizer = AutoTokenizer.from_pretrained(RERANK_MODEL_NAME)
+            self._ov_device = ov_device
+            print(f"  [Rerank] OpenVINO 加速已启用 (device={ov_device})")
+            return True
+        except Exception as e:
+            print(f"  [Rerank] OpenVINO 加载失败(忽略,走 CPU fallback): {e}")
+            return False
 
     def rerank(
         self,
@@ -101,8 +158,13 @@ class Reranker:
         # 构造 (query, document) 对
         pairs = [(query, hit["text"]) for hit in hits]
 
-        # 批量打分
-        scores = self._model.predict(pairs)
+        # 区分加载路径:
+        #   - sentence-transformers CrossEncoder: 自带 .predict(pairs, batch_size=...)
+        #   - optimum OpenVINO 模型: 没有 .predict, 走 tokenizer + model 路径
+        if getattr(self, "_backend", "sentence_transformers") == "openvino":
+            scores = self._ov_predict(pairs)
+        else:
+            scores = self._model.predict(pairs, batch_size=16, show_progress_bar=False)
 
         # 将分数赋回 hits
         scored_hits = []
@@ -116,6 +178,36 @@ class Reranker:
         scored_hits.sort(key=lambda x: x["rerank_score"], reverse=True)
 
         return scored_hits[:top_n]
+
+    def _ov_predict(self, pairs: List[tuple]) -> List[float]:
+        """OpenVINO 路径的 batch 推理。返回每个 (q, d) 对的相关性分数。"""
+        import torch  # 局部 import,避免顶层依赖
+        tokenizer = self._tokenizer
+        model = self._model
+
+        BATCH = 16
+        scores: List[float] = []
+        for i in range(0, len(pairs), BATCH):
+            batch = pairs[i : i + BATCH]
+            texts_1 = [p[0] for p in batch]
+            texts_2 = [p[1] for p in batch]
+            inputs = tokenizer(
+                texts_1,
+                texts_2,
+                padding=True,
+                truncation=True,
+                max_length=512,
+                return_tensors="pt",
+            )
+            outputs = model(**inputs)
+            # Cross-Encoder 输出 logits,取 [0] 维(单类别相关性分数)
+            logits = outputs.logits if hasattr(outputs, "logits") else outputs[0]
+            if logits.dim() == 2:
+                batch_scores = logits[:, 0].tolist()
+            else:
+                batch_scores = logits.tolist()
+            scores.extend(batch_scores)
+        return scores
 
     def _rerank_llm(
         self,

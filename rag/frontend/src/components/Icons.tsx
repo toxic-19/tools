@@ -153,3 +153,29 @@ export const CheckIcon: React.FC<IconProps> = ({ className = '', style }) => (
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
+
+export const ActivityIcon: React.FC<IconProps> = ({ className = '', style }) => (
+  <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+export const ZapIcon: React.FC<IconProps> = ({ className = '', style }) => (
+  <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+
+export const DatabaseIcon: React.FC<IconProps> = ({ className = '', style }) => (
+  <svg className={className} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="5" rx="9" ry="3" />
+    <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+    <path d="M3 12a9 3 0 0 0 18 0" />
+  </svg>
+);
+
+export const PlayIcon: React.FC<IconProps> = ({ className = '', style }) => (
+  <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="5 3 19 12 5 21 5 3" />
+  </svg>
+);

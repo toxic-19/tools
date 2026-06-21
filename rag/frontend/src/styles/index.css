@@ -214,7 +214,10 @@
   backdrop-filter: var(--card-style-blur);
   -webkit-backdrop-filter: var(--card-style-blur);
   opacity: var(--card-style-opacity);
-  transition: all var(--transition);
+  /* 只过渡背景/边框/阴影，不要 transition:all —— 否则滚动时 backdrop-filter
+     重新计算也会触发整卡 transition，造成可见的"一亮一暗"。 */
+  transition: background-color var(--transition), border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 .style-card-sm {
@@ -224,7 +227,8 @@
   box-shadow: var(--card-style-shadow);
   backdrop-filter: var(--card-style-blur);
   -webkit-backdrop-filter: var(--card-style-blur);
-  transition: all var(--transition);
+  transition: background-color var(--transition), border-color var(--transition),
+    box-shadow var(--transition);
 }
 
 /* ================================================================
@@ -306,6 +310,21 @@ body {
   }
 }
 
+/* 消息入场动画 — 只用 opacity，不带 translateY。
+   glass 风格下 translate + backdrop-filter 重绘会肉眼可见地"跳"。 */
+@keyframes messageEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.message-enter {
+  animation: messageEnter 0.18s ease-out;
+}
+
 @keyframes pulse {
   0%,
   100% {
@@ -354,7 +373,16 @@ body {
    Component Utilities
    ================================================================ */
 .transition-all {
-  transition: all var(--transition);
+  transition: background-color var(--transition), border-color var(--transition),
+    color var(--transition), box-shadow var(--transition);
+}
+
+/* 聊天滚动容器：独立合成层 + 关闭 overscroll 链，避免滚到底"弹"一下。 */
+.chat-scroll {
+  will-change: transform;
+  overscroll-behavior: contain;
+  /* 减少 backdrop-filter 在滚动时的重绘 —— 用 contain 把内容裁在容器内。 */
+  contain: layout style;
 }
 
 /* ================================================================

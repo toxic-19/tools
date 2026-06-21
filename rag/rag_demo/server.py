@@ -37,6 +37,19 @@ import traceback
 from typing import Optional, List
 from pathlib import Path
 
+# 必须在任何 huggingface_hub / optimum / sentence_transformers 被 import 之前
+# 把 .env 加载到 os.environ —— huggingface_hub.constants.ENDPOINT 是模块级常量,
+# import 时一次性读 HF_ENDPOINT,之后改 os.environ 也无效。
+from dotenv import load_dotenv
+_env_file = Path(__file__).parent.parent / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file, override=False)
+# hf-mirror.com 镜像站当前不可用(SSL 错误),直连 huggingface.co 正常;
+# 如果 .env 里意外设了坏的镜像,显式清掉,保证走官方。
+if os.environ.get('HF_ENDPOINT', '').endswith('hf-mirror.com'):
+    print(f"  [Server] 检测到 HF_ENDPOINT={os.environ['HF_ENDPOINT']},但该镜像当前不可用,改为直连 huggingface.co")
+    os.environ['HF_ENDPOINT'] = 'https://huggingface.co'
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -253,6 +266,16 @@ async def query(req: QueryRequest):
             timing=response.timing,
         )
     except Exception as e:
+        # 失败也落一条埋点（status=error），方便指标页看到失败率
+        try:
+            db.add_query_metric(
+                question_len=len(req.question),
+                search_count=0, search_requested=0, rerank_count=0,
+                embed_ms=0, retrieve_ms=0, rerank_ms=0, llm_ms=0, total_ms=0,
+                status="error", error=str(e)[:200],
+            )
+        except Exception:
+            pass
         traceback.print_exc()
         raise HTTPException(500, f"查询失败: {str(e)}")
 
@@ -447,6 +470,169 @@ async def clear_chat_history(conversation_id: Optional[int] = None):
         return {"status": "ok", "deleted": count}
     except Exception as e:
         raise HTTPException(500, f"清空聊天记录失败: {str(e)}")
+
+
+# ============================================================
+# API 路由 — 性能指标
+# ============================================================
+
+# Milvus/embedding 配置（直接读 config,给指标页展示索引信息）
+from .config import (
+    MILVUS_COLLECTION, MILVUS_HOST, MILVUS_PORT,
+    EMBEDDING_MODEL_NAME, EMBEDDING_API_BASE,
+    LLM_MODEL_NAME, LLM_API_BASE, RERANK_MODEL_NAME,
+)
+
+
+@app.get("/api/metrics/summary")
+async def metrics_summary(window: str = "1h"):
+    """
+    性能汇总:各阶段 P50/P95/Avg、采样数、成功率。
+    window: 'all' | '1h' | '24h' | '7d'
+    """
+    try:
+        s = db.get_query_metrics_summary(window=window)
+        return s
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(500, f"获取指标汇总失败: {str(e)}")
+
+
+@app.get("/api/metrics/recent")
+async def metrics_recent(limit: int = 50):
+    """最近 N 条埋点,用于指标页表格。"""
+    try:
+        items = db.get_query_metrics_recent(limit=limit)
+        return {"items": items, "total": len(items)}
+    except Exception as e:
+        raise HTTPException(500, f"获取近期埋点失败: {str(e)}")
+
+
+@app.get("/api/metrics/timeseries")
+async def metrics_timeseries(window: str = "1h", bucket_minutes: int = 5):
+    """时序聚合,用于画趋势图。"""
+    try:
+        if window == "1h":
+            bucket = 1
+        elif window == "24h":
+            bucket = 30
+        else:
+            bucket = max(1, bucket_minutes)
+        series = db.get_query_metrics_timeseries(bucket_minutes=bucket, window=window)
+        return {"window": window, "bucket_minutes": bucket, "series": series}
+    except Exception as e:
+        raise HTTPException(500, f"获取时序失败: {str(e)}")
+
+
+@app.get("/api/metrics/config")
+async def metrics_config():
+    """
+    索引/检索/模型配置 —— 给指标页「系统参数」面板用。
+    数据全部真实可查: Milvus collection 信息 + 仓库 config。
+    """
+    try:
+        pipeline = get_pipeline()
+        stats = pipeline.get_stats()
+        return {
+            "milvus": {
+                "host": f"{MILVUS_HOST}:{MILVUS_PORT}",
+                "collection": stats.get("collection", MILVUS_COLLECTION),
+                "row_count": int(stats.get("row_count", 0)),
+                "dimension": int(stats.get("dimension", 0)),
+                "index_type": "IVF_FLAT",
+                "metric_type": "COSINE",
+                "nlist": 128,
+                "nprobe": 10,
+            },
+            "retrieval": {
+                "search_top_k": SEARCH_TOP_K,
+                "rerank_top_n": RERANK_TOP_N,
+            },
+            "models": {
+                "embedding": EMBEDDING_MODEL_NAME,
+                "reranker": RERANK_MODEL_NAME,
+                "llm": LLM_MODEL_NAME,
+            },
+        }
+    except Exception as e:
+        raise HTTPException(500, f"获取配置失败: {str(e)}")
+
+
+@app.get("/api/metrics/device")
+async def metrics_device():
+    """
+    设备/运行时探测: 返回 embedding / reranker 实际加载的模型名、模式、device,以及 CUDA 是否可用。
+    用来确认 Rerank 实际跑的哪个模型,embedding 实际是本地还是 API,以及能否上 GPU。
+    """
+    try:
+        pipeline = get_pipeline()
+        emb = pipeline.embedding_model
+        rerank = pipeline.reranker
+
+        # sentence-transformers 模型对象暴露 .device 属性
+        emb_device = None
+        if emb._mode == "local" and emb._model is not None:
+            emb_device = str(getattr(emb._model, "device", "unknown"))
+
+        rerank_device = None
+        rerank_model_obj = getattr(rerank, "_model", None)
+        if rerank.mode == "cross_encoder" and rerank_model_obj is not None:
+            # OpenVINO 路径下 model.device 是 str 属性(例如 'CPU'/'GPU')
+            # sentence-transformers 路径下 model.device 是 torch.device 对象
+            d = getattr(rerank_model_obj, "device", "unknown")
+            rerank_device = str(d)
+        # OpenVINO 专用 device(在 OVModelForSequenceClassification 里不一定暴露)
+        ov_device = getattr(rerank, "_ov_device", None)
+
+        # 探测 CUDA 是否可用
+        cuda_available = False
+        cuda_count = 0
+        try:
+            import torch
+            cuda_available = bool(torch.cuda.is_available())
+            cuda_count = int(torch.cuda.device_count()) if cuda_available else 0
+        except ImportError:
+            pass
+
+        return {
+            "embedding": {
+                "model": EMBEDDING_MODEL_NAME,
+                "mode": emb._mode,                # "local" | "api"
+                "device": emb_device,             # "cuda:0" / "cpu" / null
+                "api_base": EMBEDDING_API_BASE or None,
+            },
+            "reranker": {
+                "model": RERANK_MODEL_NAME,
+                "mode": rerank.mode,              # "cross_encoder" | "llm" | "none"
+                "device": rerank_device,
+                "backend": getattr(rerank, "_backend", "unknown"),  # "openvino" | "sentence_transformers"
+                "openvino_device": ov_device,     # "CPU"/"GPU"/"AUTO" 或 null
+            },
+            "llm": {
+                "model": LLM_MODEL_NAME,
+                "api_base": LLM_API_BASE,
+            },
+            "cuda": {
+                "available": cuda_available,
+                "device_count": cuda_count,
+            },
+            "warmup": {
+                "started": getattr(pipeline, "_warmup_started", False),
+            },
+        }
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(500, f"设备探测失败: {str(e)}")
+
+
+@app.post("/api/metrics/clear")
+async def metrics_clear():
+    """清空埋点。"""
+    try:
+        n = db.clear_query_metrics()
+        return {"status": "ok", "deleted": n}
+    except Exception as e:
+        raise HTTPException(500, f"清空埋点失败: {str(e)}")
 
 
 # ============================================================

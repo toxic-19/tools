@@ -60,16 +60,19 @@ LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "2048"))
 # 方案一：本地 Cross-Encoder（推荐 bge-reranker-large）
 # 方案二：LLM 打分（调用上方 LLM 进行相关性评分）
 RERANK_MODE = os.getenv("RERANK_MODE", "cross_encoder")  # "cross_encoder" | "llm" | "none"
-RERANK_MODEL_NAME = os.getenv("RERANK_MODEL_NAME", "BAAI/bge-reranker-large")
+RERANK_MODEL_NAME = os.getenv("RERANK_MODEL_NAME", "BAAI/bge-reranker-base")
 
 # ============================================================
 # 检索与分块配置
 # ============================================================
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))         # 每个 chunk 的最大字符数
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))   # chunk 之间的重叠字符数
-SEARCH_TOP_K = int(os.getenv("SEARCH_TOP_K", "20"))       # 向量检索召回数量
+SEARCH_TOP_K = int(os.getenv("SEARCH_TOP_K", "10"))       # 向量检索召回数量(从 20 降到 10,降低短查询的噪声召回)
 RERANK_TOP_N = int(os.getenv("RERANK_TOP_N", "5"))        # Rerank 后保留的数量
-SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.0"))  # 相似度阈值
+# 相似度阈值: 0.0 = 不做任何过滤,会召回到语义沾边但主题无关的文档;
+# 0.35 是经验值,适合 nomic-embed-text + COSINE 距离 + 中文短查询场景。
+# 如果召回不足可降到 0.25,召回太杂可提到 0.45。
+SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.35"))
 
 # ============================================================
 # 文档存储路径

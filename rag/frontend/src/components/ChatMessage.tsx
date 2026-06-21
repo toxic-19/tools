@@ -145,7 +145,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 
   return (
     <div
-      className={`flex gap-3 mb-4 animate-slide-up ${isUser ? 'flex-row-reverse' : ''}`}
+      className={`flex gap-3 mb-4 message-enter ${isUser ? 'flex-row-reverse' : ''}`}
     >
       {/* Avatar */}
       <div

@@ -112,6 +112,35 @@ def init_db():
             ON chat_messages(conversation_id, created_at ASC)
         """)
 
+        # ---- 性能埋点表（每次 /api/query 落一行） ----
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS query_metrics (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                question_len      INTEGER NOT NULL DEFAULT 0,
+                search_count      INTEGER NOT NULL DEFAULT 0,  -- 实际召回到(过 threshold 之后)
+                search_requested  INTEGER NOT NULL DEFAULT 0,  -- 请求的 TopK(过 threshold 之前)
+                rerank_count      INTEGER NOT NULL DEFAULT 0,
+                embed_ms          REAL NOT NULL DEFAULT 0,
+                retrieve_ms       REAL NOT NULL DEFAULT 0,
+                rerank_ms         REAL NOT NULL DEFAULT 0,
+                llm_ms            REAL NOT NULL DEFAULT 0,
+                total_ms          REAL NOT NULL DEFAULT 0,
+                status            TEXT NOT NULL DEFAULT 'ok',
+                error             TEXT DEFAULT NULL,
+                created_at        TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+            )
+        """)
+
+        # ---- 自动迁移:为已存在的 query_metrics 表补 search_requested 列 ----
+        metric_cols = {row[1] for row in conn.execute("PRAGMA table_info(query_metrics)").fetchall()}
+        if 'search_requested' not in metric_cols:
+            conn.execute("ALTER TABLE query_metrics ADD COLUMN search_requested INTEGER NOT NULL DEFAULT 0")
+            print("  [DB] 已为 query_metrics 添加 search_requested 列(迁移)")
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_metrics_created
+            ON query_metrics(created_at DESC)
+        """)
+
     print(f"  [DB] SQLite 已初始化: {DB_PATH}")
 
 
@@ -369,3 +398,189 @@ def clear_chat_messages(conversation_id: Optional[int] = None) -> int:
         else:
             conn.execute("DELETE FROM chat_messages")
     return count
+
+
+# ============================================================
+# 性能埋点 CRUD
+# ============================================================
+
+def add_query_metric(
+    question_len: int,
+    search_count: int,
+    rerank_count: int,
+    embed_ms: float,
+    retrieve_ms: float,
+    rerank_ms: float,
+    llm_ms: float,
+    total_ms: float,
+    search_requested: int = 0,
+    status: str = "ok",
+    error: Optional[str] = None,
+) -> int:
+    """落一条 query 性能埋点。返回新记录 id。"""
+    with _get_conn() as conn:
+        cursor = conn.execute(
+            """INSERT INTO query_metrics
+               (question_len, search_count, search_requested, rerank_count,
+                embed_ms, retrieve_ms, rerank_ms, llm_ms, total_ms,
+                status, error)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (question_len, search_count, search_requested, rerank_count,
+             embed_ms, retrieve_ms, rerank_ms, llm_ms, total_ms,
+             status, error),
+        )
+        return cursor.lastrowid
+
+
+def get_query_metrics_summary(window: str = "all") -> Dict[str, Any]:
+    """
+    汇总统计。window: 'all' | '1h' | '24h' | '7d'
+    返回各阶段 P50/P95/Avg、QPS、成功率、采样数。
+    """
+    where = ""
+    params: tuple = ()
+    if window != "all":
+        # SQLite datetime('now', '-1 hour') 之类
+        window_map = {"1h": "-1 hour", "24h": "-1 day", "7d": "-7 days"}
+        offset = window_map.get(window)
+        if offset:
+            where = f"WHERE created_at >= datetime('now', '{offset}', 'localtime')"
+    sql = f"""
+        SELECT
+            COUNT(*)                                       AS samples,
+            SUM(CASE WHEN status='ok' THEN 1 ELSE 0 END)  AS ok_count,
+            AVG(embed_ms)                                  AS embed_avg,
+            AVG(retrieve_ms)                               AS retrieve_avg,
+            AVG(rerank_ms)                                 AS rerank_avg,
+            AVG(llm_ms)                                    AS llm_avg,
+            AVG(total_ms)                                  AS total_avg,
+            AVG(search_count)                              AS search_avg,
+            AVG(search_requested)                          AS search_requested_avg,
+            AVG(rerank_count)                              AS rerank_avg_count
+        FROM query_metrics
+        {where}
+    """
+    with _get_conn() as conn:
+        row = conn.execute(sql, params).fetchone()
+        # P50/P95 用 window function;SQLite 3.25+ 支持
+        p_sql = f"""
+            SELECT
+                embed_ms    AS embed_ms,
+                retrieve_ms AS retrieve_ms,
+                rerank_ms   AS rerank_ms,
+                llm_ms      AS llm_ms,
+                total_ms    AS total_ms
+            FROM query_metrics
+            {where}
+            ORDER BY id DESC
+            LIMIT 2000
+        """
+        rows = conn.execute(p_sql, params).fetchall()
+
+    samples = int(row["samples"] or 0)
+    ok_count = int(row["ok_count"] or 0)
+
+    def percentile(values: List[float], p: float) -> float:
+        if not values:
+            return 0.0
+        v = sorted(values)
+        k = max(0, min(len(v) - 1, int(round((p / 100.0) * (len(v) - 1)))))
+        return round(v[k], 1)
+
+    def col(name: str) -> List[float]:
+        return [float(r[name] or 0) for r in rows]
+
+    summary = {
+        "window": window,
+        "samples": samples,
+        "ok_count": ok_count,
+        "error_count": samples - ok_count,
+        "success_rate": round(ok_count / samples, 4) if samples else 0.0,
+        "embed": {
+            "avg": round(float(row["embed_avg"] or 0), 1),
+            "p50": percentile(col("embed_ms"), 50),
+            "p95": percentile(col("embed_ms"), 95),
+        },
+        "retrieve": {
+            "avg": round(float(row["retrieve_avg"] or 0), 1),
+            "p50": percentile(col("retrieve_ms"), 50),
+            "p95": percentile(col("retrieve_ms"), 95),
+        },
+        "rerank": {
+            "avg": round(float(row["rerank_avg"] or 0), 1),
+            "p50": percentile(col("rerank_ms"), 50),
+            "p95": percentile(col("rerank_ms"), 95),
+        },
+        "llm": {
+            "avg": round(float(row["llm_avg"] or 0), 1),
+            "p50": percentile(col("llm_ms"), 50),
+            "p95": percentile(col("llm_ms"), 95),
+        },
+        "total": {
+            "avg": round(float(row["total_avg"] or 0), 1),
+            "p50": percentile(col("total_ms"), 50),
+            "p95": percentile(col("total_ms"), 95),
+        },
+        "search_count_avg": round(float(row["search_avg"] or 0), 1),
+        "search_requested_avg": round(float(row["search_requested_avg"] or 0), 1),
+        "rerank_count_avg": round(float(row["rerank_avg_count"] or 0), 1),
+    }
+    return summary
+
+
+def get_query_metrics_recent(limit: int = 50) -> List[Dict[str, Any]]:
+    """取最近 N 条埋点（倒序）。"""
+    with _get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM query_metrics ORDER BY id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_query_metrics_timeseries(bucket_minutes: int = 5, window: str = "1h") -> List[Dict[str, Any]]:
+    """
+    按时间桶聚合，用于画时序图。
+    bucket_minutes: 桶大小（分钟）
+    window: '1h' | '24h' | '7d'
+    """
+    window_map = {"1h": "-1 hour", "24h": "-1 day", "7d": "-7 days"}
+    offset = window_map.get(window, "-1 hour")
+    # SQLite: 把时间字符串按分钟桶对齐
+    sql = f"""
+        SELECT
+            strftime('%Y-%m-%d %H:', created_at) ||
+            printf('%02d', (CAST(strftime('%M', created_at) AS INTEGER) / {bucket_minutes}) * {bucket_minutes})
+            AS bucket,
+            COUNT(*)           AS samples,
+            AVG(embed_ms)      AS embed_avg,
+            AVG(retrieve_ms)   AS retrieve_avg,
+            AVG(rerank_ms)     AS rerank_avg,
+            AVG(llm_ms)        AS llm_avg,
+            AVG(total_ms)      AS total_avg
+        FROM query_metrics
+        WHERE created_at >= datetime('now', '{offset}', 'localtime')
+        GROUP BY bucket
+        ORDER BY bucket ASC
+    """
+    with _get_conn() as conn:
+        rows = conn.execute(sql).fetchall()
+    return [
+        {
+            "bucket": r["bucket"],
+            "samples": int(r["samples"] or 0),
+            "embed": round(float(r["embed_avg"] or 0), 1),
+            "retrieve": round(float(r["retrieve_avg"] or 0), 1),
+            "rerank": round(float(r["rerank_avg"] or 0), 1),
+            "llm": round(float(r["llm_avg"] or 0), 1),
+            "total": round(float(r["total_avg"] or 0), 1),
+        }
+        for r in rows
+    ]
+
+
+def clear_query_metrics() -> int:
+    """清空所有埋点（不常用,留作管理接口）。"""
+    with _get_conn() as conn:
+        cursor = conn.execute("DELETE FROM query_metrics")
+        return cursor.rowcount

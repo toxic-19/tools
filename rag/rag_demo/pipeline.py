@@ -27,6 +27,7 @@ RAG Pipeline 核心流程
 """
 
 import os
+import threading
 import time
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
@@ -98,9 +99,50 @@ class RAGPipeline:
         # LLM 客户端（延迟初始化）
         self._llm_client = None
 
+        # 后台预热：让模型在第一个 query 之前加载完成,避免冷启动拉低首次延迟。
+        # 用 daemon 线程,不阻塞 startup;预热失败也不影响主链路。
+        self._warmup_started = False
+        self._schedule_warmup()
+
         print("\n" + "=" * 60)
         print("  Pipeline 初始化完成！")
         print("=" * 60)
+
+    def _schedule_warmup(self):
+        """起一个后台线程跑一次空推理,触发模型加载。"""
+        if self._warmup_started:
+            return
+        self._warmup_started = True
+        t = threading.Thread(target=self._warmup, daemon=True, name="rag-warmup")
+        t.start()
+
+    def _warmup(self):
+        """
+        模型预热。预热失败不抛异常 —— 主链路第一次 query 时仍会触发模型加载,
+        只是没享受到预热收益。
+        """
+        try:
+            t0 = time.perf_counter()
+            self.embedding_model.encode_query("warmup")
+            emb_dt = (time.perf_counter() - t0) * 1000
+            print(f"  [Warmup] Embedding 预热完成 ({emb_dt:.0f}ms)")
+        except Exception as e:
+            print(f"  [Warmup] Embedding 预热失败(忽略): {e}")
+
+        try:
+            rerank_model = getattr(self.reranker, "_model", None)
+            if self.reranker.mode == "cross_encoder" and rerank_model is not None:
+                t0 = time.perf_counter()
+                warmup_pairs = [("warmup query", "warmup document")]
+                backend = getattr(self.reranker, "_backend", "sentence_transformers")
+                if backend == "openvino":
+                    self.reranker._ov_predict(warmup_pairs)
+                else:
+                    rerank_model.predict(warmup_pairs, batch_size=2)
+                rerank_dt = (time.perf_counter() - t0) * 1000
+                print(f"  [Warmup] Reranker 预热完成 ({rerank_dt:.0f}ms, backend={backend})")
+        except Exception as e:
+            print(f"  [Warmup] Reranker 预热失败(忽略): {e}")
 
     def _get_llm_client(self):
         """延迟初始化 LLM 客户端。"""
@@ -246,6 +288,14 @@ class RAGPipeline:
         print(f"  召回 {len(hits)} 条结果，耗时 {timing['retrieve']}ms")
 
         if not hits:
+            self._record_metric(
+                question=question,
+                timing=timing,
+                search_count=0,
+                search_requested=SEARCH_TOP_K,
+                rerank_count=0,
+                status="ok",
+            )
             return RAGResponse(
                 question=question,
                 answer="抱歉，知识库中未找到与您问题相关的信息。",
@@ -287,6 +337,15 @@ class RAGPipeline:
             sum(v for k, v in timing.items()), 1
         )
 
+        self._record_metric(
+            question=question,
+            timing=timing,
+            search_count=len(hits),
+            search_requested=SEARCH_TOP_K,
+            rerank_count=len(reranked),
+            status="ok",
+        )
+
         return RAGResponse(
             question=question,
             answer=answer,
@@ -295,6 +354,34 @@ class RAGPipeline:
             rerank_count=len(reranked),
             timing=timing,
         )
+
+    def _record_metric(
+        self,
+        question: str,
+        timing: Dict[str, float],
+        search_count: int,
+        rerank_count: int,
+        search_requested: int = 0,
+        status: str = "ok",
+        error: Optional[str] = None,
+    ):
+        """把一次 query 的耗时落库。失败不抛异常,避免影响主链路。"""
+        try:
+            db.add_query_metric(
+                question_len=len(question),
+                search_count=search_count,
+                search_requested=search_requested,
+                rerank_count=rerank_count,
+                embed_ms=float(timing.get("embed", 0) or 0),
+                retrieve_ms=float(timing.get("retrieve", 0) or 0),
+                rerank_ms=float(timing.get("rerank", 0) or 0),
+                llm_ms=float(timing.get("llm", 0) or 0),
+                total_ms=float(timing.get("total", 0) or 0),
+                status=status,
+                error=error,
+            )
+        except Exception as e:
+            print(f"  [Metrics] 落库失败(忽略): {e}")
 
     def _build_context(self, reranked: List[Dict[str, Any]]) -> str:
         """将 reranked 结果构建为上下文字符串。"""
