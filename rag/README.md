@@ -1,7 +1,12 @@
-# RAG Demo — 知识库问答系统
+# RAG Demo — 知识库问答系统 + AI 智能体能力支撑平台
 
 基于 **检索增强生成（Retrieval-Augmented Generation）** 的企业级知识库问答系统。  
 支持多格式文档导入、语义向量检索、深度模型重排序、大模型生成回答，并提供完整的引用溯源能力。
+
+**🆕 配套能力**:在 RAG 之上,扩展了
+- **RAG-as-MCP-Server**:将 RAG 能力以 [MCP 协议](https://modelcontextprotocol.io)对外暴露
+- **AI 智能体能力支撑平台(Agent Hub)**:基于「感知-思考-行动」循环的智能体调度中枢
+- **安全沙箱**:Python 受限子进程,作为工具执行环境
 
 ---
 
@@ -340,3 +345,198 @@ HF_ENDPOINT=https://hf-mirror.com
 ```bash
 uv run run_cli.py reset
 ```
+
+---
+
+## 🆕 AI 智能体能力支撑平台 + RAG-as-MCP
+
+### 整体架构
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ React 前端 (Vite + Tailwind)                                       │
+│  智能问答 / 文档管理 / 系统配置 / 性能监控 / 🆕 智能体平台         │
+└────────────────────────┬─────────────────────────────────────────┘
+                         │ /api/agent/* (SSE 流式 trace)
+                         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│ Agent Hub (FastAPI,默认 :8100,可挂 :8000 同进程)                  │
+│                                                                       │
+│   感知 → 思考 → 行动 → 汇总                                          │
+│                                                                       │
+│   工具集:                                                            │
+│     RAG MCP Server (5 工具) + Mock 微服务 (2 工具) + 沙箱 (2 工具)    │
+│     ────────────────────────────────────────────                      │
+│     共 9 个工具,Agent 自主调度(>= 2 个工具/次任务)                     │
+└──────────┬─────────────────────────────────┬───────────────────────┘
+           │ MCP (streamable-http)             │
+           ▼                                  │
+┌──────────────────────┐                       │
+│ RAG MCP Server (:8765)│                       │
+│  Tools:               │                       │
+│   rag_query           │                       │
+│   rag_search          │                       │
+│   rag_ingest_file     │                       │
+│   rag_stats           │                       │
+│   rag_health          │                       │
+└──────────┬────────────┘                       │
+           ▼                                    │
+   RAGPipeline (完全复用 rag_demo)              │
+           │                                    │
+           ▼                                    ▼
+    Milvus + bge-m3 + Reranker + LLM     沙箱(Python 受限子进程)
+```
+
+### 启动顺序(完整演示)
+
+```bash
+# 1) 启动 Milvus(已有)
+cd D:\milvus && docker compose up -d
+
+# 2) 安装依赖(uv sync 已包含 mcp / httpx / sse-starlette)
+cd D:\awebsite_projects\tools\rag
+uv sync
+
+# 3) 启动 RAG MCP Server(端口 8765)
+uv run run_mcp_sse.py
+
+# 4) 启动主服务(:8000,自动挂载 Agent 路由到 /api/agent/*)
+uv run run_server.py
+
+# 5) 访问 http://localhost:8000
+#    左侧栏新增「智能体平台」入口
+```
+
+> 默认 Agent Hub 路由已挂在 RAG server 同进程(`/api/agent/*`)。  
+> 如需独立 :8100 端口,设置 `AGENT_HUB_IN_RAG_SERVER=false` 然后 `uv run run_agent.py`。
+
+### RAG-as-MCP-Server(`mcp_server/`)
+
+完全复用 `rag_demo.pipeline.RAGPipeline`,零侵入。  
+基于官方 `mcp[cli]>=1.0` Python SDK,支持 **streamable-http**(默认)与 **stdio** 两种 transport。
+
+| 工具 | 说明 |
+|------|------|
+| `rag_query(question, top_k?, rerank_top_n?)` | 完整 RAG 问答(Embedding → Milvus → Rerank → LLM),返回答案 + 引用 |
+| `rag_search(question, top_k?)` | 仅检索,不调 LLM,适合 Agent 拆解后取上下文 |
+| `rag_ingest_file(filepath)` | 把单个文件导入到 Milvus 知识库 |
+| `rag_stats()` | 知识库统计(collection / row_count / dimension) |
+| `rag_health()` | 健康检查(Milvus / LLM 连通性) |
+
+**启动**:
+```bash
+uv run run_mcp_sse.py              # streamable-http, 默认 :8765
+uv run python mcp_server/server_stdio.py  # stdio(命令行嵌入模式)
+```
+
+**验证**:
+```bash
+curl -X POST http://localhost:8765/mcp \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+```
+
+### Agent Hub(`agent/`)
+
+「感知-思考-行动」主循环见 [`agent/loop.py`](agent/loop.py),完整 LLM 调用见 [`agent/llm.py`](agent/llm.py)。
+
+**API 路由**:
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET  | `/api/agent/health`  | 健康检查(MCP / Mock / 沙箱) |
+| GET  | `/api/agent/tools`   | 列出可用工具(给前端用) |
+| POST | `/api/agent/chat`    | 同步:返回最终结果 + 完整 trace |
+| POST | `/api/agent/chat/stream` | 流式 SSE:逐步推送每个 trace 事件 |
+| POST | `/api/agent/sandbox/run` | 直接调沙箱(单测用) |
+
+**Agent 工具集**(>= 2 个工具/次任务,招标硬要求):
+1. `rag_query` / `rag_search` / `rag_stats` —— RAG MCP(3 个)
+2. `ehr_patient_query` —— 模拟查 EHR 患者信息
+3. `clinical_guideline_lookup` —— 模拟查临床指南
+4. `sandbox_run_python` —— 在沙箱内跑 Python
+5. `sandbox_calc` —— 受限算术求值
+
+### 安全沙箱(`agent/sandbox.py`)
+
+Python 受限子进程沙箱:
+- **隔离机制**: `subprocess.Popen` 启动 `python -m agent.sandbox_preamble` 子进程,通过 stdin/stdout JSON Lines 协议通信
+- **stdlib 白名单**: 默认仅允许 `math/json/collections/datetime/itertools` 等基础 stdlib(可由 `SANDBOX_STDLIB_ALLOWLIST` 覆盖)
+- **文件 I/O**: 受限 `builtins`,无 `open`/`os.open`,无 `os`/`shutil` 模块
+- **网络访问**: 受限 `socket`/`urllib`/`requests`(均不在白名单)
+- **wall-clock 超时**: `SANDBOX_TIMEOUT_MS`(默认 10000ms),超时父进程 SIGKILL 子进程
+- **输出截断**: `SANDBOX_MAX_OUTPUT_BYTES`(默认 64KB)
+
+**自检**:
+```bash
+curl -X POST http://localhost:8000/api/agent/sandbox/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "x = 2 + 3\nx"}'
+# → {"ok": true, "value": "5", ...}
+
+curl -X POST http://localhost:8000/api/agent/sandbox/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "import os"}'
+# → {"ok": false, "error": "ImportError: module 'os' is not in sandbox allowlist", ...}
+```
+
+### 演示流程(对应招标要点)
+
+1. 访问 `http://localhost:8000`,左侧栏点「智能体平台」
+2. 输入框中输入示例指令:
+   > "查询 P001 患者的用药禁忌,并统计知识库一共多少条文档"
+3. 前端 trace 流式渲染:
+   - 🛰️ **感知** — 捕获指令,RAG 召回 3 条相关文档
+   - 🧠 **思考 1** — LLM 决定调 `ehr_patient_query`
+   - ⚡ **行动 1** — 调用 Mock 微服务,返回 P001 用药
+   - 🧠 **思考 2** — LLM 决定调 `clinical_guideline_lookup`
+   - ⚡ **行动 2** — 调 Mock 微服务,返回药品禁忌
+   - 🧠 **思考 3** — LLM 决定调 `rag_stats` 验证
+   - ⚡ **行动 3** — 调 RAG MCP Server,返回统计
+   - 🎯 **汇总** — 输出最终答案 + 引用
+4. **工具调用次数**: >= 2 ✓
+5. **沙箱隔离执行**: 用 `sandbox_run_python` 跑任意 Python,可在 trace 看到受限子进程结果
+
+### 关键文件
+
+| 路径 | 作用 |
+|------|------|
+| `mcp_server/rag_tools.py` | RAG 5 个工具的 MCP 实现 |
+| `mcp_server/server_sse.py` | streamable-http transport 入口 |
+| `mcp_server/server_stdio.py` | stdio transport 入口 |
+| `agent/sandbox.py` | Python 受限子进程沙箱(父进程侧) |
+| `agent/sandbox_preamble.py` | 沙箱子进程启动 preamble |
+| `agent/mcp_client.py` | 通用 MCP 客户端(连 RAG MCP Server) |
+| `agent/tools.py` | Agent 工具注册中心(9 个工具) |
+| `agent/llm.py` | LLM 封装(支持 function calling + ReAct 降级) |
+| `agent/loop.py` | 「感知-思考-行动」主循环 |
+| `agent/server.py` | Agent Hub FastAPI 路由(APIRouter) |
+| `run_mcp_sse.py` | 一键启动 RAG MCP Server |
+| `run_agent.py` | 一键启动 Agent Hub 独立 :8100 进程 |
+| `frontend/src/components/AgentPanel.tsx` | 前端智能体平台面板 |
+| `frontend/src/hooks/useAgentChat.ts` | Agent SSE 流式 hook |
+| `frontend/src/api/agent.ts` | Agent API 封装 |
+
+### 配置项(`.env`)
+
+```bash
+# RAG MCP Server
+MCP_SERVER_HOST=0.0.0.0
+MCP_SERVER_PORT=8765
+
+# Agent Hub
+AGENT_HOST=0.0.0.0
+AGENT_PORT=8100
+AGENT_MAX_STEPS=8            # Agent 循环最大步数
+AGENT_RAG_TOPK=3             # 感知阶段 RAG 召回数
+AGENT_MCP_SERVER_URL=http://localhost:8765/mcp
+AGENT_ENABLE_MOCK_MICROSERVICE=true
+
+# 沙箱
+SANDBOX_TIMEOUT_MS=10000
+SANDBOX_MAX_OUTPUT_BYTES=65536
+SANDBOX_STDLIB_ALLOWLIST=    # 空则用默认安全集
+SANDBOX_FILE_ALLOWLIST=      # 空=全禁
+SANDBOX_NET_ALLOWLIST=       # 空=全禁
+```
+

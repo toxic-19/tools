@@ -4,6 +4,7 @@ import {
   FileIcon,
   SettingsIcon,
   ActivityIcon,
+  BrainIcon,
   PlusIcon,
   EditIcon,
   XIcon,
@@ -31,6 +32,7 @@ const NAV_SECTIONS = [
     items: [
       { id: 'chat', label: '智能问答', icon: ChatIcon },
       { id: 'upload', label: '文档管理', icon: FileIcon },
+      { id: 'agent', label: '智能体平台', icon: BrainIcon },
     ],
   },
   {

@@ -84,6 +84,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 可选:挂载 Agent Hub 路由(/api/agent/*)到 RAG server 同进程
+# 这样前端只需要 :8000 一个端口;Agent Hub 也能独立 :8100 启动
+if os.environ.get("AGENT_HUB_IN_RAG_SERVER", "true").lower() in ("1", "true", "yes"):
+    try:
+        from agent.server import router as agent_router
+        app.include_router(agent_router)
+        print("  [Server] Agent Hub 路由已挂载到 /api/agent (同进程)")
+    except Exception as e:
+        print(f"  [Server] Agent Hub 路由挂载失败(忽略): {e}")
+
 # Pipeline 延迟初始化
 _pipeline = None
 

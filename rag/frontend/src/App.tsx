@@ -5,6 +5,7 @@ import ChatPanel from './components/ChatPanel';
 import UploadPanel from './components/UploadPanel';
 import SettingsPanel from './components/SettingsPanel';
 import MetricsPanel from './components/MetricsPanel';
+import AgentPanel from './components/AgentPanel';
 import SwitcherPopup from './components/SwitcherPopup';
 import CitationDrawer from './components/CitationDrawer';
 import Toast, { useToast } from './components/Toast';
@@ -16,7 +17,7 @@ import { useConversations } from './hooks/useConversations';
 import { reset, Citation } from './api';
 import { SunIcon } from './components/Icons';
 
-type Panel = 'chat' | 'upload' | 'settings' | 'metrics';
+type Panel = 'chat' | 'upload' | 'settings' | 'metrics' | 'agent';
 
 const App: React.FC = () => {
   const [activePanel, setActivePanel] = useState<Panel>('chat');
@@ -103,6 +104,7 @@ const App: React.FC = () => {
     upload: '文档管理',
     settings: '系统配置',
     metrics: '性能监控',
+    agent: '智能体平台',
   };
 
   const statsData = {
@@ -191,6 +193,7 @@ const App: React.FC = () => {
         )}
         {activePanel === 'settings' && <SettingsPanel stats={statsData} />}
         {activePanel === 'metrics' && <MetricsPanel />}
+        {activePanel === 'agent' && <AgentPanel />}
       </div>
 
       {/* Switcher Popup */}
