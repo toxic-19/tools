@@ -10,6 +10,7 @@ import {
   XIcon,
   TrashIcon,
   CheckIcon,
+  ChevronRightIcon,
 } from './Icons';
 import { Conversation } from '../api';
 
@@ -45,6 +46,8 @@ const NAV_SECTIONS = [
   },
 ];
 
+const SIDEBAR_COLLAPSED_KEY = 'rag-sidebar-collapsed';
+
 const Sidebar: React.FC<SidebarProps> = ({
   activePanel,
   onPanelChange,
@@ -58,7 +61,19 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return saved === null ? true : saved === 'true';
+  });
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      return next;
+    });
+  };
 
   // 开始编辑
   const startEdit = (conv: Conversation) => {
@@ -91,8 +106,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div
-      className="w-[var(--sidebar-w)] flex flex-col duration-200"
+      className="flex flex-col duration-200"
       style={{
+        width: collapsed ? '64px' : 'var(--sidebar-w)',
         backgroundColor: 'var(--card-style-bg, var(--card))',
         borderRightColor: 'var(--card-style-border, var(--border))',
         borderRightWidth: '1px',
@@ -103,20 +119,21 @@ const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Header */}
       <div
-        className="p-5"
+        className={collapsed ? 'px-2 py-3' : 'p-5'}
         style={{
           borderBottomColor: 'var(--border)',
           borderBottomWidth: '1px',
           borderBottomStyle: 'solid',
         }}
       >
-        <div className="flex items-center gap-3">
+        <div className={collapsed ? 'flex flex-col items-center gap-2' : 'flex items-center gap-3'}>
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-base"
             style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-text)' }}
           >
             R
           </div>
+          {!collapsed && (
           <div>
             <div className="font-bold text-[15px]" style={{ color: 'var(--text)' }}>
               RAG 知识库
@@ -125,10 +142,28 @@ const Sidebar: React.FC<SidebarProps> = ({
               检索增强生成问答平台
             </div>
           </div>
+          )}
+          <button
+            onClick={toggleCollapsed}
+            className={`${collapsed ? 'w-8 h-8' : 'ml-auto w-7 h-7'} rounded-lg flex items-center justify-center transition-colors`}
+            style={{
+              color: 'var(--text-muted)',
+              backgroundColor: collapsed ? 'var(--gray-50)' : 'transparent',
+              cursor: 'pointer',
+            }}
+            title={collapsed ? '展开菜单' : '收起菜单'}
+            aria-label={collapsed ? '展开菜单' : '收起菜单'}
+          >
+            <ChevronRightIcon
+              className="w-4 h-4 transition-transform duration-200"
+              style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}
+            />
+          </button>
         </div>
       </div>
 
       {/* 对话列表区域 */}
+      {!collapsed && (
       <div className="px-3 pt-3 pb-1">
         <div className="flex items-center justify-between px-2 mb-2">
           <span
@@ -271,8 +306,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
       </div>
+      )}
 
       {/* 分隔线 */}
+      {!collapsed && (
       <div
         className="mx-3 my-1"
         style={{
@@ -281,17 +318,20 @@ const Sidebar: React.FC<SidebarProps> = ({
           borderTopStyle: 'solid',
         }}
       />
+      )}
 
       {/* Navigation */}
-      <div className="flex-1 p-3 overflow-y-auto">
+      <div className={collapsed ? 'flex-1 px-2 py-3 overflow-y-auto' : 'flex-1 p-3 overflow-y-auto'}>
         {NAV_SECTIONS.map((section) => (
           <div key={section.label}>
+            {!collapsed && (
             <div
               className="text-[10px] font-semibold uppercase tracking-wide px-3 py-3"
               style={{ color: 'var(--text-muted)' }}
             >
               {section.label}
             </div>
+            )}
             {section.items.map((item) => {
               const Icon = item.icon;
               const isActive = activePanel === item.id;
@@ -299,12 +339,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onPanelChange(item.id)}
-                  className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 transition-colors duration-200 text-[13.5px] font-medium"
+                  className={`group w-full flex items-center rounded-lg mb-0.5 transition-colors duration-200 text-[13.5px] font-medium ${
+                    collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-2.5'
+                  }`}
                   style={{
                     color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
+                    backgroundColor: collapsed && isActive ? 'var(--primary-bg)' : 'transparent',
                   }}
+                  title={item.label}
                 >
                   <Icon className="w-[18px] h-[18px]" />
+                  {!collapsed && (
                   <span
                     className="transition-colors duration-200"
                     style={{
@@ -316,6 +361,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   >
                     {item.label}
                   </span>
+                  )}
                 </button>
               );
             })}
@@ -324,6 +370,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer Stats */}
+      {!collapsed && (
       <div
         className="p-3"
         style={{
@@ -369,6 +416,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

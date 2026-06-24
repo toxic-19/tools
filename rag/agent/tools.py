@@ -301,6 +301,18 @@ class ToolRegistry:
         except Exception:
             pass
 
+    async def _ensure_mcp_connected(self) -> bool:
+        """Best-effort reconnect for cases where Agent starts before MCP."""
+        if self.mcp_client._connected:
+            return True
+        try:
+            await self.mcp_client.connect()
+            return True
+        except Exception as e:
+            logger.warning(f"[ToolRegistry] MCP Server still unavailable: {e}")
+            self.mcp_client._connected = False
+            return False
+
     # ============================================================
     # 工具清单(异步)
     # ============================================================
@@ -310,7 +322,7 @@ class ToolRegistry:
         tools: List[Dict[str, Any]] = []
 
         # 1. MCP 工具
-        if self.mcp_client._connected:
+        if await self._ensure_mcp_connected():
             try:
                 mcp_tools = await self.mcp_client.list_tools()
                 for t in mcp_tools:
@@ -390,12 +402,12 @@ class ToolRegistry:
                 None, _sandbox_calc, arguments.get("expression", "")
             )
         # 3. MCP
-        if self.mcp_client._connected and not name.startswith(("ehr_", "clinical_", "sandbox_")):
+        if not name.startswith(("ehr_", "clinical_", "sandbox_")) and await self._ensure_mcp_connected():
             return await self.mcp_client.call_tool(name, arguments)
         return ToolCallResult(ok=False, error=f"unknown tool: {name}")
 
     async def health(self) -> Dict[str, Any]:
-        mcp_health = await self.mcp_client.health() if self.mcp_client._connected else {"ok": False, "error": "not connected"}
+        mcp_health = await self.mcp_client.health() if await self._ensure_mcp_connected() else {"ok": False, "url": self.mcp_url, "error": "not connected"}
         return {
             "mcp_server": mcp_health,
             "mock_microservice_enabled": self.enable_mock,
