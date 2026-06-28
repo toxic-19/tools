@@ -124,6 +124,9 @@ class AgentLoop:
             think_event = self._think(messages, tools, step)
             yield think_event
 
+            if think_event.phase == "error":
+                return
+
             if think_event.content.get("is_final"):
                 final = TraceEvent(
                     phase="final",
@@ -135,21 +138,42 @@ class AgentLoop:
                 yield final
                 return
 
-            # 3. 行动(异步)
-            tool_name = think_event.content.get("tool_name")
-            tool_args = think_event.content.get("tool_args", {})
-            act_event = await self._act_async(tool_name, tool_args, step)
-            yield act_event
-            tool_calls_count += 1
+            tool_calls = think_event.content.get("tool_calls") or []
+            protocol = think_event.content.get("tool_protocol", "function_calling")
 
-            # 4. 写回消息历史
-            tc_id = think_event.content.get("tool_call_id")
-            tool_msg = {
-                "role": "tool",
-                "tool_call_id": tc_id or f"call_{step}",
-                "content": json.dumps(act_event.content.get("result", {}), ensure_ascii=False, default=str)[:4000],
-            }
-            messages.append(tool_msg)
+            # 3. 先把 assistant 的工具调用消息写入历史。OpenAI/DeepSeek 要求
+            # role=tool 必须紧跟在带 tool_calls 的 assistant 消息之后。
+            if protocol == "function_calling":
+                messages.append(_assistant_tool_calls_message(think_event.content.get("content", ""), tool_calls))
+            else:
+                messages.append({"role": "assistant", "content": think_event.content.get("content", "")})
+
+            # 4. 行动(异步):同一轮返回的 tool_calls 必须全部补齐 tool 结果。
+            for idx, tc in enumerate(tool_calls):
+                tool_name = tc.get("name")
+                tool_args = tc.get("arguments", {})
+                act_event = await self._act_async(tool_name, tool_args, step)
+                yield act_event
+                tool_calls_count += 1
+
+                tc_id = tc.get("id") or f"call_{step}_{idx}"
+                logger.info(f"[Agent] tool_call_id for result: {tc_id}")
+                result_text = json.dumps(
+                    act_event.content.get("result", {}),
+                    ensure_ascii=False,
+                    default=str,
+                )[:4000]
+                if protocol == "function_calling":
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc_id,
+                        "content": result_text,
+                    })
+                else:
+                    messages.append({
+                        "role": "user",
+                        "content": f"Observation ({tool_name}): {result_text}",
+                    })
 
         # 超步数
         yield TraceEvent(
@@ -259,21 +283,38 @@ class AgentLoop:
             )
 
         if resp.tool_calls:
-            tc = resp.tool_calls[0]  # 一次只执行一个工具,降低复杂度
+            tool_calls = [
+                {
+                    "id": tc.get("id") or f"call_{step}_{i}",
+                    "name": tc.get("name"),
+                    "arguments": tc.get("arguments") or {},
+                }
+                for i, tc in enumerate(resp.tool_calls)
+            ]
+            first = tool_calls[0]
             return TraceEvent(
                 phase="think",
                 step=step,
                 content={
                     "is_final": False,
                     "content": resp.content,
-                    "tool_name": tc["name"],
-                    "tool_args": tc["arguments"],
-                    "tool_call_id": tc.get("id"),
+                    "tool_name": first["name"],
+                    "tool_args": first["arguments"],
+                    "tool_call_id": first["id"],
+                    "tool_calls": tool_calls,
+                    "tool_protocol": (
+                        "react" if resp.finish_reason == "react_parsed" else "function_calling"
+                    ),
                 },
-                tool_name=tc["name"],
-                tool_args=tc["arguments"],
+                tool_name=first["name"],
+                tool_args=first["arguments"],
                 elapsed_ms=elapsed,
-                message=f"决定调用工具: {tc['name']}",
+                message=(
+                    f"决定调用工具: {first['name']}"
+                    if len(tool_calls) == 1
+                    else f"决定调用 {len(tool_calls)} 个工具: "
+                         f"{', '.join(tc['name'] for tc in tool_calls if tc.get('name'))}"
+                ),
             )
         else:
             # LLM 直接给答案(没有 tool_calls)
@@ -341,6 +382,25 @@ def _truncate_for_display(value: Any, max_chars: int = 2000) -> Any:
         s = json.dumps(value, ensure_ascii=False, default=str)
         return s[:max_chars] + ("..." if len(s) > max_chars else "")
     return str(value)[:max_chars]
+
+
+def _assistant_tool_calls_message(content: str, tool_calls: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """构造可回放给 OpenAI 兼容接口的 assistant tool_calls 消息。"""
+    return {
+        "role": "assistant",
+        "content": content or "",
+        "tool_calls": [
+            {
+                "id": tc.get("id"),
+                "type": "function",
+                "function": {
+                    "name": tc.get("name"),
+                    "arguments": json.dumps(tc.get("arguments") or {}, ensure_ascii=False, default=str),
+                },
+            }
+            for tc in tool_calls
+        ],
+    }
 
 
 # ============================================================
